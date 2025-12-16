@@ -293,11 +293,16 @@ export class PhysicsManager {
             
             // Apply super boost if active
             if (this.activePowerupEffects.superBoost) {
-                modifiedImpulse.x *= 15;
-                modifiedImpulse.y *= 15;
-                modifiedImpulse.z *= 15;
-                console.log('💥 SUPER BOOST ACTIVATED! 15X POWER - NO SPEED LIMIT!');
+                modifiedImpulse.x *= 5;
+                modifiedImpulse.y *= 5;
+                modifiedImpulse.z *= 5;
+                console.log('💥 SUPER BOOST ACTIVATED! 5X POWER + CRAZY BOUNCES!');
                 this.activePowerupEffects.superBoost = false;
+                // Keep crazy bounces active for 8 seconds after shot
+                setTimeout(() => {
+                    this.resetBounceModifier();
+                    console.log('💥 Super Boost bounce effect ended');
+                }, 8000);
             }
             
             // Apply feather ball if active (reduce gravity temporarily)
@@ -334,16 +339,10 @@ export class PhysicsManager {
                 // Also increase wall bounce for crazy knockback
                 this.world.contactmaterials.forEach(cm => {
                     if (cm.materials.includes(this.ballMaterial) && cm.materials.includes(this.wallMaterial)) {
-                        cm.restitution = 3.0; // 5x wall bounce (default is 0.6) - controlled chaos
+                        cm.restitution = 3.0; // 3x wall bounce for controlled chaos
                     }
                 });
-                console.log('💥 Super Boost ready for next shot! 15X POWER + CRAZY BOUNCES!');
-                // Reset wall bounce after shot or 3 seconds
-                setTimeout(() => {
-                    if (this.activePowerupEffects.superBoost) {
-                        this.resetBounceModifier();
-                    }
-                }, 3000);
+                console.log('💥 Super Boost ready for next shot! 5X POWER + CRAZY BOUNCES!');
                 break;
                 
             case 'feather_ball':
@@ -490,7 +489,10 @@ export class PhysicsManager {
         this.meshToBody.forEach((body, mesh) => {
             // Cap ball velocity to prevent tunneling and infinite loops
             if (body.shapes[0] && body.shapes[0].radius === 0.5) { // Is a ball
-                const maxSpeed = 350; // Reasonable cap to prevent infinite bouncing
+                // Speed cap: adjust these values to change max speeds
+                const normalMaxSpeed = 100;
+                const superBoostMaxSpeed = 100; // Can be increased later if needed
+                const maxSpeed = this.activePowerupEffects.superBoost ? superBoostMaxSpeed : normalMaxSpeed;
                 const speed = body.velocity.length();
                 
                 if (speed > maxSpeed) {
