@@ -61,7 +61,14 @@ class MapEditor {
             ramps: [],
             powerupSpawns: [],
             fans: [],
-            bouncePads: []
+            bouncePads: [],
+            bumpers: [],
+            speedBoosts: [],
+            settings: {
+                skyColor: 0x87CEEB,
+                groundColor: 0x228B22,
+                gravity: -30
+            }
         };
         
         // Animation tracking for fans
@@ -113,8 +120,8 @@ class MapEditor {
         };
         
         // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        this.scene.add(ambientLight);
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        this.scene.add(this.ambientLight);
         
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         directionalLight.position.set(10, 20, 10);
@@ -122,10 +129,14 @@ class MapEditor {
         
         // Ground
         const groundGeometry = new THREE.PlaneGeometry(100, 100);
-        const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x2d5016 });
+        const groundMaterial = new THREE.MeshLambertMaterial({ 
+            color: 0x2d5016,
+            map: this.createCheckeredTexture(0x2d5016)
+        });
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
+        this.ground = ground; // Store reference
         this.scene.add(ground);
         
         // Grid
@@ -388,6 +399,116 @@ class MapEditor {
         return padGroup;
     }
     
+    createBumper(position, rotationY = 0, strength = 15) {
+        const bumperGroup = new THREE.Group();
+        
+        // Base disc
+        const baseGeometry = new THREE.CylinderGeometry(1, 1, 0.5, 32);
+        const baseMaterial = new THREE.MeshLambertMaterial({ color: 0x990000 });
+        const base = new THREE.Mesh(baseGeometry, baseMaterial);
+        bumperGroup.add(base);
+        
+        // Top ring (glowing)
+        const ringGeometry = new THREE.TorusGeometry(0.9, 0.1, 16, 32);
+        const ringMaterial = new THREE.MeshLambertMaterial({ 
+            color: 0xff0000,
+            emissive: 0xff0000,
+            emissiveIntensity: 0.5
+        });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.position.y = 0.3;
+        ring.rotation.x = Math.PI / 2;
+        bumperGroup.add(ring);
+        
+        // Warning stripes
+        for (let i = 0; i < 8; i++) {
+            const angle = (i * Math.PI * 2) / 8;
+            const stripe = new THREE.Mesh(
+                new THREE.BoxGeometry(0.15, 0.6, 0.05),
+                new THREE.MeshLambertMaterial({ color: 0xffff00 })
+            );
+            stripe.position.x = Math.cos(angle) * 0.8;
+            stripe.position.z = Math.sin(angle) * 0.8;
+            stripe.rotation.y = angle;
+            bumperGroup.add(stripe);
+        }
+        
+        bumperGroup.position.set(position.x, position.y, position.z);
+        bumperGroup.rotation.y = (rotationY * Math.PI) / 180;
+        
+        const bumperData = { position, rotationY, strength };
+        bumperGroup.userData = { 
+            type: 'bumper',
+            data: bumperData
+        };
+        
+        this.scene.add(bumperGroup);
+        this.objects.push(bumperGroup);
+        this.mapData.bumpers.push(bumperData);
+        
+        return bumperGroup;
+    }
+    
+    createSpeedBoost(position, rotationY = 0, strength = 50) {
+        const boostGroup = new THREE.Group();
+        
+        // Base pad (bright yellow)
+        const baseGeometry = new THREE.CylinderGeometry(0.8, 0.8, 0.2, 32);
+        const baseMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffff00,
+            emissive: 0xffff00,
+            emissiveIntensity: 0.5,
+            roughness: 0.3,
+            metalness: 0.7
+        });
+        const base = new THREE.Mesh(baseGeometry, baseMaterial);
+        boostGroup.add(base);
+        
+        // Direction arrows (3 arrows pointing forward)
+        const arrowMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xff6600,
+            emissive: 0xff6600,
+            emissiveIntensity: 0.8
+        });
+        
+        for (let i = 0; i < 3; i++) {
+            // Arrow shaft
+            const shaft = new THREE.Mesh(
+                new THREE.BoxGeometry(0.15, 0.05, 0.4),
+                arrowMaterial
+            );
+            shaft.position.y = 0.15;
+            shaft.position.z = -0.2 + (i * 0.25);
+            boostGroup.add(shaft);
+            
+            // Arrow head (triangle)
+            const head = new THREE.Mesh(
+                new THREE.ConeGeometry(0.12, 0.2, 3),
+                arrowMaterial
+            );
+            head.rotation.x = Math.PI / 2;
+            head.position.y = 0.15;
+            head.position.z = -0.4 + (i * 0.25);
+            boostGroup.add(head);
+        }
+        
+        boostGroup.position.set(position.x, position.y, position.z);
+        boostGroup.rotation.y = (rotationY * Math.PI) / 180;
+        
+        const boostData = { position, rotationY, strength };
+        boostGroup.userData = { 
+            type: 'speedBoost',
+            data: boostData
+        };
+        
+        this.scene.add(boostGroup);
+        this.objects.push(boostGroup);
+        this.mapData.speedBoosts.push(boostData);
+        
+        console.log('⚡ Speed boost created at:', position);
+        return boostGroup;
+    }
+    
     setupEventListeners() {
         // Palette buttons
         document.querySelectorAll('.palette-item').forEach(btn => {
@@ -423,6 +544,20 @@ class MapEditor {
         });
         document.getElementById('grid-size').addEventListener('change', (e) => {
             this.gridSize = parseFloat(e.target.value);
+        });
+        
+        // Map settings controls
+        document.getElementById('map-sky-color').addEventListener('input', (e) => {
+            this.updateSkyColor(e.target.value);
+        });
+        document.getElementById('map-ground-color').addEventListener('input', (e) => {
+            this.updateGroundColor(e.target.value);
+        });
+        document.getElementById('map-gravity').addEventListener('input', (e) => {
+            this.updateGravity(parseFloat(e.target.value));
+        });
+        document.getElementById('map-brightness').addEventListener('input', (e) => {
+            this.updateBrightness(parseFloat(e.target.value));
         });
         
         // Canvas click and mouse move
@@ -836,6 +971,22 @@ class MapEditor {
                     20 // default strength
                 );
                 break;
+            
+            case 'bumper':
+                obj = this.createBumper(
+                    { x: position.x, y: position.y !== undefined ? position.y : 0.25, z: position.z },
+                    this.previewRotation,
+                    15 // default strength
+                );
+                break;
+            
+            case 'speedBoost':
+                obj = this.createSpeedBoost(
+                    { x: position.x, y: position.y !== undefined ? position.y : 0.1, z: position.z },
+                    this.previewRotation,
+                    50 // default strength
+                );
+                break;
                 
             case 'start':
                 // Move existing start point
@@ -1044,6 +1195,30 @@ class MapEditor {
             </div>`;
         }
         
+        if (type === 'bumper') {
+            html += `<div class="property-group">
+                <label>Rotation Y (degrees)</label>
+                <input type="number" id="prop-rotation" value="${data.rotationY || 0}" step="15" min="0" max="360">
+            </div>`;
+            
+            html += `<div class="property-group">
+                <label>Push Strength</label>
+                <input type="number" id="prop-strength" value="${data.strength || 15}" step="1" min="5" max="40">
+            </div>`;
+        }
+        
+        if (type === 'speedBoost') {
+            html += `<div class="property-group">
+                <label>Rotation Y (degrees)</label>
+                <input type="number" id="prop-rotation" value="${data.rotationY || 0}" step="15" min="0" max="360">
+            </div>`;
+            
+            html += `<div class="property-group">
+                <label>Speed Strength</label>
+                <input type="number" id="prop-strength" value="${data.strength || 30}" step="5" min="10" max="100">
+            </div>`;
+        }
+        
         if (type === 'hole') {
             html += `<div class="property-group">
                 <label>Radius</label>
@@ -1101,6 +1276,10 @@ class MapEditor {
                 this.updateFanRotation(parseFloat(rotation.value));
             } else if (type === 'bounce_pad') {
                 this.updateBouncePadRotation(parseFloat(rotation.value));
+            } else if (type === 'bumper') {
+                this.updateBumperRotation(parseFloat(rotation.value));
+            } else if (type === 'speedBoost') {
+                this.updateSpeedBoostRotation(parseFloat(rotation.value));
             }
         });
         
@@ -1124,6 +1303,10 @@ class MapEditor {
                 this.updateFanStrength(parseFloat(strength.value));
             } else if (type === 'bounce_pad') {
                 this.updateBouncePadStrength(parseFloat(strength.value));
+            } else if (type === 'bumper') {
+                this.updateBumperStrength(parseFloat(strength.value));
+            } else if (type === 'speedBoost') {
+                this.updateSpeedBoostStrength(parseFloat(strength.value));
             }
         });
         
@@ -1234,6 +1417,36 @@ class MapEditor {
         }
     }
     
+    updateBumperStrength(value) {
+        if (this.selectedObject && this.selectedObject.userData.type === 'bumper') {
+            this.selectedObject.userData.data.strength = value;
+            this.saveHistory('modify');
+        }
+    }
+    
+    updateBumperRotation(value) {
+        if (this.selectedObject && this.selectedObject.userData.type === 'bumper') {
+            this.selectedObject.userData.data.rotationY = value;
+            this.selectedObject.rotation.y = (value * Math.PI) / 180;
+            this.saveHistory('modify');
+        }
+    }
+    
+    updateSpeedBoostStrength(value) {
+        if (this.selectedObject && this.selectedObject.userData.type === 'speedBoost') {
+            this.selectedObject.userData.data.strength = value;
+            this.saveHistory('modify');
+        }
+    }
+    
+    updateSpeedBoostRotation(value) {
+        if (this.selectedObject && this.selectedObject.userData.type === 'speedBoost') {
+            this.selectedObject.userData.data.rotationY = value;
+            this.selectedObject.rotation.y = (value * Math.PI) / 180;
+            this.saveHistory('modify');
+        }
+    }
+    
     updateHoleRadius(value) {
         if (this.selectedObject && this.selectedObject.userData.type === 'hole') {
             this.selectedObject.userData.data.radius = value;
@@ -1283,6 +1496,15 @@ class MapEditor {
                 const bladeIndex = this.fanBlades.indexOf(this.selectedObject.userData.blades);
                 if (bladeIndex > -1) this.fanBlades.splice(bladeIndex, 1);
             }
+        } else if (type === 'bounce_pad') {
+            const padIndex = this.mapData.bouncePads.indexOf(data);
+            if (padIndex > -1) this.mapData.bouncePads.splice(padIndex, 1);
+        } else if (type === 'bumper') {
+            const bumperIndex = this.mapData.bumpers.indexOf(data);
+            if (bumperIndex > -1) this.mapData.bumpers.splice(bumperIndex, 1);
+        } else if (type === 'speedBoost') {
+            const boostIndex = this.mapData.speedBoosts.indexOf(data);
+            if (boostIndex > -1) this.mapData.speedBoosts.splice(boostIndex, 1);
         }
         
         this.selectedObject = null;
@@ -1334,6 +1556,15 @@ class MapEditor {
                     const bladeIndex = this.fanBlades.indexOf(obj.userData.blades);
                     if (bladeIndex > -1) this.fanBlades.splice(bladeIndex, 1);
                 }
+            } else if (type === 'bounce_pad') {
+                const padIndex = this.mapData.bouncePads.indexOf(data);
+                if (padIndex > -1) this.mapData.bouncePads.splice(padIndex, 1);
+            } else if (type === 'bumper') {
+                const bumperIndex = this.mapData.bumpers.indexOf(data);
+                if (bumperIndex > -1) this.mapData.bumpers.splice(bumperIndex, 1);
+            } else if (type === 'speedBoost') {
+                const boostIndex = this.mapData.speedBoosts.indexOf(data);
+                if (boostIndex > -1) this.mapData.speedBoosts.splice(boostIndex, 1);
             }
         });
         
@@ -2012,6 +2243,8 @@ class MapEditor {
                 else if (this.selectedTool === 'start') yOffset = 1;
                 else if (this.selectedTool === 'hole') yOffset = 0.05;
                 else if (this.selectedTool === 'bounce_pad') yOffset = 0.15;
+                else if (this.selectedTool === 'bumper') yOffset = 0.25;
+                else if (this.selectedTool === 'speedBoost') yOffset = 0.1;
                 
                 intersectPoint.y += yOffset;
                 
@@ -2044,6 +2277,8 @@ class MapEditor {
         else if (this.selectedTool === 'start') yOffset = 1;
         else if (this.selectedTool === 'hole') yOffset = 0.05;
         else if (this.selectedTool === 'bounce_pad') yOffset = 0.15;
+        else if (this.selectedTool === 'bumper') yOffset = 0.25;
+        else if (this.selectedTool === 'speedBoost') yOffset = 0.1;
         
         intersectPoint.y += yOffset;
         
@@ -2168,6 +2403,42 @@ class MapEditor {
                 padGroup.position.y = 0.15;
                 padGroup.rotation.y = (this.previewRotation * Math.PI) / 180;
                 mesh = padGroup;
+                break;
+            
+            case 'bumper':
+                // Preview of bumper
+                const bumperGroup = new THREE.Group();
+                
+                geometry = new THREE.CylinderGeometry(1, 1, 0.5, 32);
+                material = new THREE.MeshLambertMaterial({ 
+                    color: 0xff0000,
+                    transparent: true,
+                    opacity: 0.5
+                });
+                const bumper = new THREE.Mesh(geometry, material);
+                bumperGroup.add(bumper);
+                
+                bumperGroup.position.y = 0.25;
+                bumperGroup.rotation.y = (this.previewRotation * Math.PI) / 180;
+                mesh = bumperGroup;
+                break;
+            
+            case 'speedBoost':
+                // Preview of speed boost
+                const boostGroup = new THREE.Group();
+                
+                geometry = new THREE.CylinderGeometry(0.8, 0.8, 0.2, 32);
+                material = new THREE.MeshLambertMaterial({ 
+                    color: 0xffff00,
+                    transparent: true,
+                    opacity: 0.5
+                });
+                const boost = new THREE.Mesh(geometry, material);
+                boostGroup.add(boost);
+                
+                boostGroup.position.y = 0.1;
+                boostGroup.rotation.y = (this.previewRotation * Math.PI) / 180;
+                mesh = boostGroup;
                 break;
         }
         
@@ -2896,7 +3167,147 @@ class MapEditor {
                     this.createBouncePad(pad.position, pad.rotationY || 0, pad.strength || 20);
                 });
             }
+            
+            if (this.mapData.bumpers) {
+                this.mapData.bumpers.forEach(bumper => {
+                    this.createBumper(bumper.position, bumper.rotationY || 0, bumper.strength || 15);
+                });
+            }
+            
+            if (this.mapData.speedBoosts) {
+                this.mapData.speedBoosts.forEach(boost => {
+                    this.createSpeedBoost(boost.position, boost.rotationY || 0, boost.strength || 30);
+                });
+            }
+            
+            // Apply map settings if they exist
+            if (!this.mapData.settings) {
+                this.mapData.settings = {
+                    skyColor: 0x87CEEB,
+                    groundColor: 0x228B22,
+                    gravity: -30,
+                    brightness: 0.8
+                };
+            }
+            // Add brightness if missing from old maps
+            if (this.mapData.settings.brightness === undefined) {
+                this.mapData.settings.brightness = 0.8;
+            }
+            this.applyMapSettings();
         this.updatePropertiesPanel();
+    }
+    
+    updateSkyColor(colorHex) {
+        const color = parseInt(colorHex.replace('#', ''), 16);
+        this.mapData.settings.skyColor = color;
+        this.scene.background = new THREE.Color(color);
+        if (this.scene.fog) {
+            this.scene.fog.color = new THREE.Color(color);
+        }
+        console.log('🌤️ Sky color updated:', colorHex);
+    }
+    
+    updateGroundColor(colorHex) {
+        const color = parseInt(colorHex.replace('#', ''), 16);
+        this.mapData.settings.groundColor = color;
+        
+        // Update ground mesh color and checkered texture
+        if (this.ground && this.ground.material) {
+            this.ground.material.color = new THREE.Color(color);
+            this.ground.material.map = this.createCheckeredTexture(color);
+            this.ground.material.needsUpdate = true;
+        }
+        console.log('🌱 Ground color updated:', colorHex);
+    }
+    
+    updateGravity(value) {
+        this.mapData.settings.gravity = value;
+        document.getElementById('map-gravity-value').textContent = value;
+        console.log('⚖️ Gravity updated:', value);
+    }
+    
+    updateBrightness(value) {
+        this.mapData.settings.brightness = parseFloat(value);
+        
+        // Update ambient light intensity
+        if (this.ambientLight) {
+            this.ambientLight.intensity = parseFloat(value);
+        }
+        
+        document.getElementById('map-brightness-value').textContent = value;
+        console.log('💡 Brightness updated:', value);
+    }
+    
+    createCheckeredTexture(baseColor) {
+        // Create a canvas for the checkered pattern
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        
+        // Convert hex color to RGB
+        const color = new THREE.Color(baseColor);
+        const r = Math.floor(color.r * 255);
+        const g = Math.floor(color.g * 255);
+        const b = Math.floor(color.b * 255);
+        
+        // Create darker version (multiply by 0.85 for subtle effect)
+        const r2 = Math.floor(r * 0.85);
+        const g2 = Math.floor(g * 0.85);
+        const b2 = Math.floor(b * 0.85);
+        
+        const lightColor = `rgb(${r}, ${g}, ${b})`;
+        const darkColor = `rgb(${r2}, ${g2}, ${b2})`;
+        
+        // Draw checkerboard pattern (8x8 grid = 32x32 pixel squares)
+        const squareSize = 32;
+        for (let x = 0; x < 8; x++) {
+            for (let y = 0; y < 8; y++) {
+                ctx.fillStyle = (x + y) % 2 === 0 ? lightColor : darkColor;
+                ctx.fillRect(x * squareSize, y * squareSize, squareSize, squareSize);
+            }
+        }
+        
+        // Create texture from canvas
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(10, 10); // Repeat 10 times across the 100x100 ground
+        
+        return texture;
+    }
+    
+    applyMapSettings() {
+        // Apply sky color
+        const skyColor = this.mapData.settings.skyColor;
+        this.scene.background = new THREE.Color(skyColor);
+        if (this.scene.fog) {
+            this.scene.fog.color = new THREE.Color(skyColor);
+        }
+        
+        // Apply ground color and checkered texture
+        const groundColor = this.mapData.settings.groundColor;
+        if (this.ground && this.ground.material) {
+            this.ground.material.color = new THREE.Color(groundColor);
+            this.ground.material.map = this.createCheckeredTexture(groundColor);
+            this.ground.material.needsUpdate = true;
+        }
+        
+        // Apply brightness
+        const brightness = this.mapData.settings.brightness !== undefined ? this.mapData.settings.brightness : 0.8;
+        if (this.ambientLight) {
+            this.ambientLight.intensity = brightness;
+        }
+        
+        // Update UI controls
+        document.getElementById('map-sky-color').value = '#' + skyColor.toString(16).padStart(6, '0');
+        document.getElementById('map-ground-color').value = '#' + groundColor.toString(16).padStart(6, '0');
+        document.getElementById('map-gravity').value = this.mapData.settings.gravity;
+        document.getElementById('map-gravity-value').textContent = this.mapData.settings.gravity;
+        document.getElementById('map-brightness').value = brightness;
+        document.getElementById('map-brightness-value').textContent = brightness;
+        
+        console.log('✅ Map settings applied');
     }
     
     animate() {

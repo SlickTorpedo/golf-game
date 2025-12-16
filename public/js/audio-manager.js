@@ -110,6 +110,15 @@ export class AudioManager {
         if (UI.audio.ballWhooshSfx) {
             UI.audio.ballWhooshSfx.volume = this.volumes.master * this.volumes.sfx;
         }
+        if (UI.audio.boostSfx) {
+            UI.audio.boostSfx.volume = this.volumes.master * this.volumes.sfx;
+        }
+        if (UI.audio.bounceSfx) {
+            UI.audio.bounceSfx.volume = this.volumes.master * this.volumes.sfx;
+        }
+        if (UI.audio.bumpSfx) {
+            UI.audio.bumpSfx.volume = this.volumes.master * this.volumes.sfx;
+        }
     }
     
     updateVolumeDisplays() {
@@ -227,6 +236,21 @@ export class AudioManager {
     playPickupSound() {
         console.log('💎 Playing pickup sound');
         this.playSfx(UI.audio.pickupSfx);
+    }
+
+    playBoostSound() {
+        console.log('⚡ Playing boost sound');
+        this.playSfx(UI.audio.boostSfx);
+    }
+
+    playBounceSound() {
+        console.log('🟢 Playing bounce sound');
+        this.playSfx(UI.audio.bounceSfx);
+    }
+
+    playBumpSound() {
+        console.log('🔴 Playing bump sound');
+        this.playSfx(UI.audio.bumpSfx);
     }
 
     playProximitySound(volume) {

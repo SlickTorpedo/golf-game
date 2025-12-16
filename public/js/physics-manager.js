@@ -2,13 +2,14 @@ import * as CANNON from 'https://cdn.skypack.dev/cannon-es';
 import * as THREE from 'three';
 
 export class PhysicsManager {
-    constructor(scene) {
+    constructor(scene, audioManager = null) {
         this.scene = scene;
+        this.audioManager = audioManager;
         this.world = new CANNON.World();
         
         // Set gravity (stronger for more weight and faster falling)
-        this.world.gravity.set(0, -20, 0);
-        this.defaultGravity = -20;
+        this.world.gravity.set(0, -30, 0);
+        this.defaultGravity = -30;
         
         // Active powerup effects
         this.activePowerupEffects = {
@@ -38,7 +39,7 @@ export class PhysicsManager {
             this.groundMaterial,
             {
                 friction: 0.6, // Higher friction slows ball down more
-                restitution: 0.2, // Lower bounciness
+                restitution: 0.5, // Realistic bouncing - ball bounces a few times
                 contactEquationStiffness: 1e8,
                 contactEquationRelaxation: 3
             }
@@ -68,7 +69,14 @@ export class PhysicsManager {
         // Track last safe position (over ground) for each ball
         this.lastSafePositions = new Map();
         
-        // Bounce pad collision listener with cooldown
+        // Setup collision listeners
+        this.setupCollisionListeners();
+        
+        console.log('⚙️ Physics world initialized');
+    }
+    
+    setupCollisionListeners() {
+        // Bounce pad and bumper collision listener with cooldown
         this.world.addEventListener('beginContact', (event) => {
             const bodyA = event.bodyA;
             const bodyB = event.bodyB;
@@ -105,16 +113,105 @@ export class PhysicsManager {
                     
                     ball.bouncePadCooldown = now;
                     console.log('🟢 Bounce pad triggered! Y velocity set to:', bouncePad.bounceStrength);
+                    
+                    // Play bounce sound
+                    if (this.audioManager) {
+                        this.audioManager.playBounceSound();
+                    }
+                }
+            }
+            
+            // Check if collision is between ball and bumper
+            let bumperBall = null;
+            let bumper = null;
+            
+            if (bodyA.isBumper && bodyB.shapes[0] && bodyB.shapes[0].radius === 0.5) {
+                bumper = bodyA;
+                bumperBall = bodyB;
+            } else if (bodyB.isBumper && bodyA.shapes[0] && bodyA.shapes[0].radius === 0.5) {
+                bumper = bodyB;
+                bumperBall = bodyA;
+            }
+            
+            if (bumperBall && bumper) {
+                // Initialize cooldown timer if not exists
+                if (!bumperBall.bumperCooldown) {
+                    bumperBall.bumperCooldown = 0;
+                }
+                
+                // Only push if cooldown expired
+                const now = Date.now();
+                if (now - bumperBall.bumperCooldown > 500) {
+                    // Calculate radial direction from bumper center to ball
+                    const dx = bumperBall.position.x - bumper.position.x;
+                    const dz = bumperBall.position.z - bumper.position.z;
+                    const distance = Math.sqrt(dx * dx + dz * dz);
+                    
+                    if (distance > 0) {
+                        // Normalize direction
+                        const dirX = dx / distance;
+                        const dirZ = dz / distance;
+                        
+                        // Apply strong radial push - 1.5x multiplier for good launch
+                        const pushStrength = bumper.pushStrength * 1.5;
+                        bumperBall.velocity.x = dirX * pushStrength;
+                        bumperBall.velocity.z = dirZ * pushStrength;
+                        // Add upward velocity for bounce effect
+                        bumperBall.velocity.y = pushStrength * 0.4;
+                        
+                        bumperBall.bumperCooldown = now;
+                        console.log('🔴 Bumper triggered! Push velocity:', pushStrength, 'direction:', dirX, dirZ);
+                        
+                        // Play bump sound
+                        if (this.audioManager) {
+                            this.audioManager.playBumpSound();
+                        }
+                    }
+                }
+            }
+            
+            // Speed boost collision
+            if ((bodyA.isSpeedBoost && bodyB.shapes[0] && bodyB.shapes[0].radius === 0.5) ||
+                (bodyB.isSpeedBoost && bodyA.shapes[0] && bodyA.shapes[0].radius === 0.5)) {
+                
+                const ball = bodyA.isSpeedBoost ? bodyB : bodyA;
+                const speedBoost = bodyA.isSpeedBoost ? bodyA : bodyB;
+                
+                // Initialize cooldown timer if not exists
+                if (!ball.speedBoostCooldown) {
+                    ball.speedBoostCooldown = 0;
+                }
+                
+                // Only boost if cooldown expired
+                const now = Date.now();
+                if (now - ball.speedBoostCooldown > 500) {
+                    // Calculate direction based on speed boost rotation
+                    const rotationRad = (speedBoost.boostRotationY * Math.PI) / 180;
+                    const dirX = -Math.sin(rotationRad);
+                    const dirZ = -Math.cos(rotationRad);
+                    
+                    // Apply directional boost
+                    const boostStrength = speedBoost.boostStrength;
+                    ball.velocity.x = dirX * boostStrength;
+                    ball.velocity.z = dirZ * boostStrength;
+                    // Keep Y velocity or add small upward component
+                    ball.velocity.y = Math.max(ball.velocity.y, 2);
+                    
+                    ball.speedBoostCooldown = now;
+                    console.log('⚡ Speed boost triggered! Velocity:', boostStrength, 'direction:', speedBoost.boostRotationY, '°');
+                    
+                    // Play boost sound
+                    if (this.audioManager) {
+                        this.audioManager.playBoostSound();
+                    }
                 }
             }
         });
-        
-        console.log('⚙️ Physics world initialized');
     }
     
     initializeWorld() {
         // Set gravity
-        this.world.gravity.set(0, -9.82, 0);
+        this.world.gravity.set(0, -30, 0);
         
         // Improve collision detection with higher quality settings
         this.world.broadphase = new CANNON.NaiveBroadphase();
@@ -136,7 +233,7 @@ export class PhysicsManager {
             this.groundMaterial,
             {
                 friction: 0.6,
-                restitution: 0.2,
+                restitution: 0.5,
                 contactEquationStiffness: 1e8,
                 contactEquationRelaxation: 3
             }
@@ -168,6 +265,9 @@ export class PhysicsManager {
         this.world.addContactMaterial(ballWallContact);
         this.world.addContactMaterial(ballRampContact);
         this.world.addContactMaterial(ballRampContact);
+        
+        // Setup collision listeners for bounce pads and bumpers
+        this.setupCollisionListeners();
     }
     
     destroyPhysicsWorld() {
@@ -187,6 +287,12 @@ export class PhysicsManager {
         this.world.contactmaterials = [];
         
         console.log('✅ Physics world destroyed');
+    }
+    
+    setGravity(gravity) {
+        this.defaultGravity = gravity;
+        this.world.gravity.set(0, gravity, 0);
+        console.log('⚖️ Gravity set to:', gravity);
     }
     
     rebuildPhysicsWorld() {
@@ -285,11 +391,15 @@ export class PhysicsManager {
         body.addShape(shape);
         body.position.set(position.x, position.y, position.z);
         
+        // Apply rotation to physics body
+        const rotationRad = (rotationY * Math.PI) / 180;
+        body.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), rotationRad);
+        
         this.world.addBody(body);
         this.meshToBody.set(mesh, body);
         this.wallBodies.push(body);
         
-        console.log('🧱 Wall created at:', position);
+        console.log('🧱 Wall created at:', position, 'rotation:', rotationY);
         return { mesh, body };
     }
     
@@ -494,6 +604,51 @@ export class PhysicsManager {
         
         this.world.addBody(body);
         console.log('🟢 Bounce pad physics body created at:', position);
+        return body;
+    }
+    
+    createBumper(position, strength = 15, radius = 1) {
+        // Create cylinder body for bumper
+        const shape = new CANNON.Cylinder(radius, radius, 0.5, 32);
+        const body = new CANNON.Body({
+            mass: 0, // Static
+            position: new CANNON.Vec3(position.x, position.y, position.z),
+            collisionResponse: false // Make it a sensor - detect collisions but don't apply physical forces
+        });
+        body.addShape(shape);
+        
+        // Rotate to be upright
+        body.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+        
+        // Store bumper data
+        body.isBumper = true;
+        body.pushStrength = strength;
+        
+        this.world.addBody(body);
+        console.log('🔴 Bumper physics body created at:', position, 'strength:', strength);
+        return body;
+    }
+    
+    createSpeedBoost(position, strength = 30, rotationY = 0, radius = 0.8) {
+        // Create cylinder body for speed boost
+        const shape = new CANNON.Cylinder(radius, radius, 0.2, 32);
+        const body = new CANNON.Body({
+            mass: 0, // Static
+            position: new CANNON.Vec3(position.x, position.y, position.z),
+            collisionResponse: false // Make it a sensor - detect collisions but don't apply physical forces
+        });
+        body.addShape(shape);
+        
+        // Rotate to be horizontal
+        body.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+        
+        // Store speed boost data with direction
+        body.isSpeedBoost = true;
+        body.boostStrength = strength;
+        body.boostRotationY = rotationY;
+        
+        this.world.addBody(body);
+        console.log('⚡ Speed boost physics body created at:', position, 'strength:', strength, 'direction:', rotationY);
         return body;
     }
     

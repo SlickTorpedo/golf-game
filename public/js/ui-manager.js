@@ -73,6 +73,9 @@ export const UI = {
         scoreSfx: document.getElementById('score-sfx'),
         gameFinishedSfx: document.getElementById('game-finished-sfx'),
         pickupSfx: document.getElementById('pickup-sfx'),
+        boostSfx: document.getElementById('boost-sfx'),
+        bounceSfx: document.getElementById('bounce-sfx'),
+        bumpSfx: document.getElementById('bump-sfx'),
         ballHitVariations: [], // Will be populated with different pitch versions
         proximityAudio: null // Created dynamically for powerup proximity
     },

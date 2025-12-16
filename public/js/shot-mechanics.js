@@ -255,7 +255,8 @@ export class ShotMechanics {
                         .copy(this.localBall.position)
                         .addScaledVector(arrowDirection, distanceFromBall + bobOffset);
                     
-                    arrowPos.y = 0.15; // Slightly above ground
+                    // Keep arrow at ball's Y position (centered on ball)
+                    arrowPos.y = this.localBall.position.y;
                     this.powerArrows[i].position.copy(arrowPos);
                     
                     // Keep the flat rotation and point arrow away from ball

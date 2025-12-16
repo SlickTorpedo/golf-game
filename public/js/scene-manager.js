@@ -50,6 +50,12 @@ export class SceneManager {
         
         // Bounce pad tracking for physics
         this.bouncePads = [];
+        
+        // Bumper tracking for physics
+        this.bumpers = [];
+        
+        // Speed boost tracking for physics
+        this.speedBoosts = [];
     }
     
     initGame(players, localPlayerId, socket, audioManager, mapData = null) {
@@ -79,7 +85,7 @@ export class SceneManager {
         
         // Physics
         console.log('⚙️ Creating physics manager');
-        this.physicsManager = new PhysicsManager(this.scene);
+        this.physicsManager = new PhysicsManager(this.scene, this.audioManager);
         this.physicsManager.sceneManager = this; // Give physics access to fans
         
         // Powerups
@@ -134,8 +140,8 @@ export class SceneManager {
         console.log('💡 Setting up stylized lighting');
         
         // Ambient light for base illumination
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-        this.scene.add(ambientLight);
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        this.scene.add(this.ambientLight);
         
         // Directional light from above for definition (no shadows)
         const mainLight = new THREE.DirectionalLight(0xffffff, 0.6);
@@ -147,14 +153,16 @@ export class SceneManager {
         fillLight.position.set(-30, 20, -30);
         this.scene.add(fillLight);
         
-        // Ground - simple plane (hole is shown by black circle in createHole)
+        // Ground - plane with checkered pattern
         console.log('🌱 Creating ground plane');
         const groundGeometry = new THREE.PlaneGeometry(100, 100);
         const groundMaterial = new THREE.MeshLambertMaterial({ 
-            color: 0x5cb85c // Brighter, more saturated green
+            color: 0x5cb85c, // Brighter, more saturated green
+            map: this.createCheckeredTexture(0x5cb85c)
         });
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
         ground.rotation.x = -Math.PI / 2;
+        this.ground = ground; // Store reference for later color updates
         this.scene.add(ground);
         
         // Create physics ground (will be updated with hole position later)
@@ -226,8 +234,27 @@ export class SceneManager {
                 });
             }
             
+            // Create bumpers from map
+            if (this.mapData.bumpers) {
+                this.mapData.bumpers.forEach(bumper => {
+                    this.createBumper(bumper.position, bumper.rotationY || 0, bumper.strength || 15);
+                });
+            }
+            
+            // Create speed boosts from map
+            if (this.mapData.speedBoosts) {
+                this.mapData.speedBoosts.forEach(boost => {
+                    this.createSpeedBoost(boost.position, boost.rotationY || 0, boost.strength || 50);
+                });
+            }
+            
             // Create hole from map
             this.createHole(this.mapData.hole);
+            
+            // Apply map settings
+            if (this.mapData.settings) {
+                this.applyMapSettings(this.mapData.settings);
+            }
         } else {
             console.log('🗺️ Using default map');
             // Add some obstacles inside
@@ -246,6 +273,8 @@ export class SceneManager {
             console.log('⛳ Creating hole and flag');
             this.createHole({ x: 25, y: 0, z: -25 });
         }
+        
+        this.applyMapSettings();
         
         // Create balls for all players
         console.log('⚽ Creating player balls');
@@ -354,6 +383,80 @@ export class SceneManager {
         this.playerBalls.set(playerId, ball);
         
         return ball;
+    }
+    
+    createCheckeredTexture(baseColor) {
+        // Create a canvas for the checkered pattern
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        
+        // Convert hex color to RGB
+        const color = new THREE.Color(baseColor);
+        const r = Math.floor(color.r * 255);
+        const g = Math.floor(color.g * 255);
+        const b = Math.floor(color.b * 255);
+        
+        // Create darker version (multiply by 0.85 for subtle effect)
+        const r2 = Math.floor(r * 0.85);
+        const g2 = Math.floor(g * 0.85);
+        const b2 = Math.floor(b * 0.85);
+        
+        const lightColor = `rgb(${r}, ${g}, ${b})`;
+        const darkColor = `rgb(${r2}, ${g2}, ${b2})`;
+        
+        // Draw checkerboard pattern (8x8 grid = 32x32 pixel squares)
+        const squareSize = 32;
+        for (let x = 0; x < 8; x++) {
+            for (let y = 0; y < 8; y++) {
+                ctx.fillStyle = (x + y) % 2 === 0 ? lightColor : darkColor;
+                ctx.fillRect(x * squareSize, y * squareSize, squareSize, squareSize);
+            }
+        }
+        
+        // Create texture from canvas
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(10, 10); // Repeat 10 times across the 100x100 ground
+        
+        return texture;
+    }
+    
+    applyMapSettings(settings = null) {
+        const mapSettings = settings || (this.mapData && this.mapData.settings) || {
+            skyColor: 0x87CEEB,
+            groundColor: 0x228B22,
+            gravity: -30,
+            brightness: 0.8
+        };
+        
+        // Apply sky color
+        this.scene.background = new THREE.Color(mapSettings.skyColor);
+        if (this.scene.fog) {
+            this.scene.fog.color = new THREE.Color(mapSettings.skyColor);
+        }
+        
+        // Apply ground color and update checkered texture
+        if (this.ground && this.ground.material) {
+            this.ground.material.color = new THREE.Color(mapSettings.groundColor);
+            this.ground.material.map = this.createCheckeredTexture(mapSettings.groundColor);
+            this.ground.material.needsUpdate = true;
+        }
+        
+        // Apply brightness to ambient light
+        const brightness = mapSettings.brightness !== undefined ? mapSettings.brightness : 0.8;
+        if (this.ambientLight) {
+            this.ambientLight.intensity = brightness;
+        }
+        
+        // Apply gravity to physics world
+        if (this.physicsManager) {
+            this.physicsManager.setGravity(mapSettings.gravity);
+        }
+        
+        console.log('✅ Map settings applied - Sky:', mapSettings.skyColor.toString(16), 'Ground:', mapSettings.groundColor.toString(16), 'Gravity:', mapSettings.gravity, 'Brightness:', brightness);
     }
     
     createFan(position, rotationY = 0, angle = 0, strength = 10) {
@@ -508,6 +611,133 @@ export class SceneManager {
         
         console.log('🟢 Bounce pad created at:', position, 'strength:', strength);
         return padGroup;
+    }
+    
+    createBumper(position, rotationY = 0, strength = 15) {
+        const bumperGroup = new THREE.Group();
+        
+        // Base disc
+        const baseGeometry = new THREE.CylinderGeometry(1, 1, 0.5, 32);
+        const baseMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x990000,
+            roughness: 0.5,
+            metalness: 0.3
+        });
+        const base = new THREE.Mesh(baseGeometry, baseMaterial);
+        bumperGroup.add(base);
+        
+        // Top ring (glowing)
+        const ringGeometry = new THREE.TorusGeometry(0.9, 0.1, 16, 32);
+        const ringMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xff0000,
+            emissive: 0xff0000,
+            emissiveIntensity: 0.8,
+            roughness: 0.3
+        });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.position.y = 0.3;
+        ring.rotation.x = Math.PI / 2;
+        bumperGroup.add(ring);
+        
+        // Warning stripes
+        const stripeMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffff00,
+            emissive: 0xffff00,
+            emissiveIntensity: 0.3
+        });
+        for (let i = 0; i < 8; i++) {
+            const angle = (i * Math.PI * 2) / 8;
+            const stripe = new THREE.Mesh(
+                new THREE.BoxGeometry(0.15, 0.6, 0.05),
+                stripeMaterial
+            );
+            stripe.position.x = Math.cos(angle) * 0.8;
+            stripe.position.z = Math.sin(angle) * 0.8;
+            stripe.rotation.y = angle;
+            bumperGroup.add(stripe);
+        }
+        
+        bumperGroup.position.set(position.x, position.y, position.z);
+        bumperGroup.rotation.y = (rotationY * Math.PI) / 180;
+        
+        this.scene.add(bumperGroup);
+        
+        // Store for physics
+        this.bumpers.push({
+            group: bumperGroup,
+            position: position,
+            strength: strength,
+            radius: 1
+        });
+        
+        // Add physics body for collision
+        this.physicsManager.createBumper(position, strength, 1);
+        
+        console.log('🔴 Bumper created at:', position, 'strength:', strength);
+        return bumperGroup;
+    }
+    
+    createSpeedBoost(position, rotationY = 0, strength = 50) {
+        const boostGroup = new THREE.Group();
+        
+        // Base pad (bright yellow)
+        const baseGeometry = new THREE.CylinderGeometry(0.8, 0.8, 0.2, 32);
+        const baseMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffff00,
+            emissive: 0xffff00,
+            emissiveIntensity: 0.5,
+            roughness: 0.3,
+            metalness: 0.7
+        });
+        const base = new THREE.Mesh(baseGeometry, baseMaterial);
+        boostGroup.add(base);
+        
+        // Direction arrows (3 arrows pointing forward)
+        const arrowMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xff6600,
+            emissive: 0xff6600,
+            emissiveIntensity: 0.8
+        });
+        
+        for (let i = 0; i < 3; i++) {
+            // Arrow shaft
+            const shaft = new THREE.Mesh(
+                new THREE.BoxGeometry(0.15, 0.05, 0.4),
+                arrowMaterial
+            );
+            shaft.position.y = 0.15;
+            shaft.position.z = -0.2 + (i * 0.25);
+            boostGroup.add(shaft);
+            
+            // Arrow head (triangle)
+            const head = new THREE.Mesh(
+                new THREE.ConeGeometry(0.12, 0.2, 3),
+                arrowMaterial
+            );
+            head.rotation.x = Math.PI / 2;
+            head.position.y = 0.15;
+            head.position.z = -0.4 + (i * 0.25);
+            boostGroup.add(head);
+        }
+        
+        boostGroup.position.set(position.x, position.y, position.z);
+        boostGroup.rotation.y = (rotationY * Math.PI) / 180;
+        
+        this.scene.add(boostGroup);
+        
+        // Store for physics
+        this.speedBoosts.push({
+            group: boostGroup,
+            position: position,
+            strength: strength,
+            rotationY: rotationY
+        });
+        
+        // Add physics body for collision
+        this.physicsManager.createSpeedBoost(position, strength, rotationY, 0.8);
+        
+        console.log('⚡ Speed boost created at:', position, 'strength:', strength, 'direction:', rotationY);
+        return boostGroup;
     }
     
     createHole(position) {
@@ -824,6 +1054,34 @@ export class SceneManager {
             { x: wallThickness, y: wallHeight, z: playAreaSize }
         );
         
+        // Remove old visual meshes for fans, bounce pads, and bumpers
+        if (this.fans) {
+            this.fans.forEach(fan => {
+                if (fan.group) this.scene.remove(fan.group);
+            });
+        }
+        if (this.bouncePads) {
+            this.bouncePads.forEach(pad => {
+                if (pad.group) this.scene.remove(pad.group);
+            });
+        }
+        if (this.bumpers) {
+            this.bumpers.forEach(bumper => {
+                if (bumper.group) this.scene.remove(bumper.group);
+            });
+        }
+        if (this.speedBoosts) {
+            this.speedBoosts.forEach(boost => {
+                if (boost.group) this.scene.remove(boost.group);
+            });
+        }
+        
+        // Clear tracking arrays
+        this.fans = [];
+        this.bouncePads = [];
+        this.bumpers = [];
+        this.speedBoosts = [];
+        
         // Recreate map objects - either from mapData or use defaults
         if (this.mapData) {
             console.log(`🗺️ Recreating custom map: ${this.mapData.name}`);
@@ -839,6 +1097,34 @@ export class SceneManager {
             if (this.mapData.ramps) {
                 this.mapData.ramps.forEach(ramp => {
                     this.physicsManager.createRamp(ramp.position, ramp.size, ramp.rotationY, ramp.angle, ramp.color);
+                });
+            }
+            
+            // Recreate fans from map
+            if (this.mapData.fans) {
+                this.mapData.fans.forEach(fan => {
+                    this.createFan(fan.position, fan.rotationY || 0, fan.strength || 10);
+                });
+            }
+            
+            // Recreate bounce pads from map
+            if (this.mapData.bouncePads) {
+                this.mapData.bouncePads.forEach(pad => {
+                    this.createBouncePad(pad.position, pad.rotationY || 0, pad.strength || 20);
+                });
+            }
+            
+            // Recreate bumpers from map
+            if (this.mapData.bumpers) {
+                this.mapData.bumpers.forEach(bumper => {
+                    this.createBumper(bumper.position, bumper.rotationY || 0, bumper.strength || 15);
+                });
+            }
+            
+            // Recreate speed boosts from map
+            if (this.mapData.speedBoosts) {
+                this.mapData.speedBoosts.forEach(boost => {
+                    this.createSpeedBoost(boost.position, boost.rotationY || 0, boost.strength || 50);
                 });
             }
         } else {

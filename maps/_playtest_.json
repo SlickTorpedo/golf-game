@@ -15,15 +15,12 @@
   "ramps": [],
   "powerupSpawns": [],
   "fans": [],
-  "bouncePads": [
-    {
-      "position": {
-        "x": -9,
-        "y": 0,
-        "z": 18
-      },
-      "rotationY": 0,
-      "strength": 50
-    }
-  ]
+  "bouncePads": [],
+  "bumpers": [],
+  "speedBoosts": [],
+  "settings": {
+    "skyColor": 8900331,
+    "groundColor": 2134621,
+    "gravity": -30
+  }
 }

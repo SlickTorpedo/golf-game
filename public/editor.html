@@ -91,6 +91,14 @@
                         <span class="icon">🟢</span>
                         <span class="label">Bounce Pad</span>
                     </button>
+                    <button class="palette-item" data-type="bumper" data-category="utility">
+                        <span class="icon">🔴</span>
+                        <span class="label">Bumper</span>
+                    </button>
+                    <button class="palette-item" data-type="speedBoost" data-category="utility">
+                        <span class="icon">⚡</span>
+                        <span class="label">Speed Boost</span>
+                    </button>
                 </div>
             </div>
 
@@ -117,6 +125,27 @@
                 <div id="properties-content">
                     <p class="hint">Select an object to edit its properties</p>
                 </div>
+                
+                <div id="map-settings">
+                    <h2>🌍 Map Settings</h2>
+                    <div class="property-group">
+                        <label>Sky Color</label>
+                        <input type="color" id="map-sky-color" value="#87CEEB">
+                    </div>
+                    <div class="property-group">
+                        <label>Ground Color</label>
+                        <input type="color" id="map-ground-color" value="#228B22">
+                    </div>
+                    <div class="property-group">
+                        <label>Gravity: <span id="map-gravity-value">-30</span></label>
+                        <input type="range" id="map-gravity" min="-50" max="-5" value="-30" step="1">
+                    </div>
+                    <div class="property-group">
+                        <label>Brightness: <span id="map-brightness-value">0.8</span></label>
+                        <input type="range" id="map-brightness" min="0.2" max="1.5" value="0.8" step="0.1">
+                    </div>
+                </div>
+                
                 <div id="placement-controls">
                     <h2>Placement Settings</h2>
                     <div id="placement-content">
