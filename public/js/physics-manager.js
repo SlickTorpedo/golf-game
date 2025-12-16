@@ -13,6 +13,7 @@ export class PhysicsManager {
         // Active powerup effects
         this.activePowerupEffects = {
             superBoost: false,
+            superBoostBouncing: false,
             featherBall: false,
             superBounce: false,
             stickyBall: false
@@ -209,8 +210,8 @@ export class PhysicsManager {
         body.position.set(mesh.position.x, mesh.position.y, mesh.position.z);
         
         // Enable Continuous Collision Detection (CCD) to prevent tunneling at high speeds
-        body.ccdSpeedThreshold = 1; // Enable CCD when speed exceeds 1 unit/s
-        body.ccdIterations = 10; // Number of CCD iterations for accuracy
+        body.ccdSpeedThreshold = 0.1; // Enable CCD at very low speeds to catch everything
+        body.ccdIterations = 20; // Increased iterations for better accuracy
         
         this.world.addBody(body);
         this.meshToBody.set(mesh, body);
@@ -293,14 +294,17 @@ export class PhysicsManager {
             
             // Apply super boost if active
             if (this.activePowerupEffects.superBoost) {
-                modifiedImpulse.x *= 5;
-                modifiedImpulse.y *= 5;
-                modifiedImpulse.z *= 5;
-                console.log('💥 SUPER BOOST ACTIVATED! 5X POWER + CRAZY BOUNCES!');
+                modifiedImpulse.x *= 3;
+                modifiedImpulse.y *= 3;
+                modifiedImpulse.z *= 3;
+                console.log('💥 SUPER BOOST ACTIVATED! 3X POWER + CRAZY BOUNCES!');
                 this.activePowerupEffects.superBoost = false;
+                // Track that super boost bouncing is active
+                this.activePowerupEffects.superBoostBouncing = true;
                 // Keep crazy bounces active for 8 seconds after shot
                 setTimeout(() => {
                     this.resetBounceModifier();
+                    this.activePowerupEffects.superBoostBouncing = false;
                     console.log('💥 Super Boost bounce effect ended');
                 }, 8000);
             }
@@ -339,10 +343,10 @@ export class PhysicsManager {
                 // Also increase wall bounce for crazy knockback
                 this.world.contactmaterials.forEach(cm => {
                     if (cm.materials.includes(this.ballMaterial) && cm.materials.includes(this.wallMaterial)) {
-                        cm.restitution = 3.0; // 3x wall bounce for controlled chaos
+                        cm.restitution = 2.5; // 2.5x wall bounce for super bouncy feel
                     }
                 });
-                console.log('💥 Super Boost ready for next shot! 5X POWER + CRAZY BOUNCES!');
+                console.log('💥 Super Boost ready for next shot! 3X POWER + CRAZY BOUNCES!');
                 break;
                 
             case 'feather_ball':
@@ -489,19 +493,58 @@ export class PhysicsManager {
         this.meshToBody.forEach((body, mesh) => {
             // Cap ball velocity to prevent tunneling and infinite loops
             if (body.shapes[0] && body.shapes[0].radius === 0.5) { // Is a ball
+                // Store previous position for tunneling check
+                if (!body.previousPosition) {
+                    body.previousPosition = body.position.clone();
+                }
+                
                 // Speed cap: adjust these values to change max speeds
                 const normalMaxSpeed = 100;
-                const superBoostMaxSpeed = 100; // Can be increased later if needed
-                const maxSpeed = this.activePowerupEffects.superBoost ? superBoostMaxSpeed : normalMaxSpeed;
+                const superBoostBouncingMaxSpeed = 70; // Lower cap during super boost bouncing to prevent clipping
+                const maxSpeed = this.activePowerupEffects.superBoostBouncing ? superBoostBouncingMaxSpeed : normalMaxSpeed;
                 const speed = body.velocity.length();
                 
                 if (speed > maxSpeed) {
                     body.velocity.scale(maxSpeed / speed, body.velocity);
                 }
                 
+                // Anti-tunneling raycast check for high speeds
+                if (speed > 20) {
+                    const ray = new CANNON.Ray(body.previousPosition, body.position);
+                    const result = new CANNON.RaycastResult();
+                    ray.intersectWorld(this.world, {
+                        mode: CANNON.Ray.ALL,
+                        result: result,
+                        skipBackfaces: false,
+                        collisionFilterMask: -1,
+                        from: body.previousPosition,
+                        to: body.position,
+                        callback: (result) => {
+                            // If we hit a wall between previous and current position
+                            if (result.body && result.body !== body && result.body.mass === 0) {
+                                // Teleport back to just before the wall
+                                const hitPoint = result.hitPointWorld;
+                                const normal = result.hitNormalWorld;
+                                // Place ball slightly away from wall along normal
+                                body.position.copy(hitPoint).vadd(normal.scale(0.6), body.position);
+                                // Reflect velocity
+                                const dot = body.velocity.dot(normal);
+                                body.velocity.vsub(normal.scale(2 * dot), body.velocity);
+                                console.log('🛑 Prevented tunneling! Teleported ball back');
+                            }
+                        }
+                    });
+                }
+                
+                // Update previous position for next frame
+                body.previousPosition.copy(body.position);
+                
                 // Add energy loss over time to prevent infinite bouncing
-                // Apply stronger damping during super bounce to prevent soft-lock
-                if (this.activePowerupEffects.superBounce && speed > 5) {
+                // Apply aggressive damping during super boost bouncing to prevent wall clipping
+                if (this.activePowerupEffects.superBoostBouncing && speed > 5) {
+                    const dampingFactor = 0.99; // Moderate damping during super boost
+                    body.velocity.scale(dampingFactor, body.velocity);
+                } else if (this.activePowerupEffects.superBounce && speed > 5) {
                     const dampingFactor = 0.992; // Stronger damping during super bounce
                     body.velocity.scale(dampingFactor, body.velocity);
                 } else if (speed > 100) { // Normal damping for high speeds

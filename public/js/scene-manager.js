@@ -649,16 +649,36 @@ export class SceneManager {
             { x: wallThickness, y: wallHeight, z: playAreaSize }
         );
         
-        // Recreate obstacles
-        this.physicsManager.createWall({ x: 10, y: 1, z: 10 }, { x: 4, y: 2, z: 4 });
-        this.physicsManager.createWall({ x: -15, y: 1, z: -15 }, { x: 3, y: 2, z: 6 });
-        this.physicsManager.createWall({ x: -10, y: 1, z: 15 }, { x: 5, y: 2, z: 2 });
-        
-        // Recreate ramps
-        this.physicsManager.createRamp({ x: 15, y: 0.3, z: -5 }, { x: 8, y: 0.5, z: 6 }, 90, 20); // Ramp facing east
-        this.physicsManager.createRamp({ x: -20, y: 0.4, z: 0 }, { x: 10, y: 0.5, z: 8 }, 0, 25); // Steeper ramp facing north
-        this.physicsManager.createRamp({ x: 0, y: 0.3, z: -20 }, { x: 6, y: 0.5, z: 10 }, 180, 15); // Gentle ramp facing south
-        this.physicsManager.createRamp({ x: -5, y: 0.5, z: -10 }, { x: 8, y: 0.5, z: 5 }, 270, 30); // Steep ramp facing west
+        // Recreate map objects - either from mapData or use defaults
+        if (this.mapData) {
+            console.log(`🗺️ Recreating custom map: ${this.mapData.name}`);
+            
+            // Recreate walls from map
+            if (this.mapData.walls) {
+                this.mapData.walls.forEach(wall => {
+                    this.physicsManager.createWall(wall.position, wall.size);
+                });
+            }
+            
+            // Recreate ramps from map
+            if (this.mapData.ramps) {
+                this.mapData.ramps.forEach(ramp => {
+                    this.physicsManager.createRamp(ramp.position, ramp.size, ramp.rotationY, ramp.angle);
+                });
+            }
+        } else {
+            console.log('🗺️ Recreating default map');
+            // Recreate obstacles
+            this.physicsManager.createWall({ x: 10, y: 1, z: 10 }, { x: 4, y: 2, z: 4 });
+            this.physicsManager.createWall({ x: -15, y: 1, z: -15 }, { x: 3, y: 2, z: 6 });
+            this.physicsManager.createWall({ x: -10, y: 1, z: 15 }, { x: 5, y: 2, z: 2 });
+            
+            // Recreate ramps
+            this.physicsManager.createRamp({ x: 15, y: 0.3, z: -5 }, { x: 8, y: 0.5, z: 6 }, 90, 20);
+            this.physicsManager.createRamp({ x: -20, y: 0.4, z: 0 }, { x: 10, y: 0.5, z: 8 }, 0, 25);
+            this.physicsManager.createRamp({ x: 0, y: 0.3, z: -20 }, { x: 6, y: 0.5, z: 10 }, 180, 15);
+            this.physicsManager.createRamp({ x: -5, y: 0.5, z: -10 }, { x: 8, y: 0.5, z: 5 }, 270, 30);
+        }
         
         // Recreate large and thick catch area under hole
         const catchAreaSize = 1.2 * 2; // 2x the hole radius
@@ -671,10 +691,11 @@ export class SceneManager {
         this.physicsManager.world.addBody(holeBottomBody);
         
         // Reset all balls to starting positions
+        const mapStartPoint = this.mapData?.startPoint || { x: 0, y: 3, z: 30 };
         this.playerBalls.forEach((ball, playerId) => {
             const startPos = playerId === this.localPlayerId ? 
-                { x: 0, y: 3, z: 30 } : 
-                { x: Math.random() * 10 - 5, y: 3, z: 30 + Math.random() * 5 };
+                mapStartPoint : 
+                { x: mapStartPoint.x + Math.random() * 10 - 5, y: mapStartPoint.y || 3, z: mapStartPoint.z + Math.random() * 5 };
             
             // Move ball mesh to start position FIRST
             ball.position.set(startPos.x, startPos.y, startPos.z);
