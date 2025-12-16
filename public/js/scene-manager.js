@@ -429,7 +429,7 @@ export class SceneManager {
             skyColor: 0x87CEEB,
             groundColor: 0x228B22,
             gravity: -30,
-            brightness: 0.8
+            brightness: 1.5
         };
         
         // Apply sky color
@@ -446,7 +446,7 @@ export class SceneManager {
         }
         
         // Apply brightness to ambient light
-        const brightness = mapSettings.brightness !== undefined ? mapSettings.brightness : 0.8;
+        const brightness = mapSettings.brightness !== undefined ? mapSettings.brightness : 1.5;
         if (this.ambientLight) {
             this.ambientLight.intensity = brightness;
         }

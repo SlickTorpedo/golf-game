@@ -19,8 +19,9 @@
   "bumpers": [],
   "speedBoosts": [],
   "settings": {
-    "skyColor": 8900331,
-    "groundColor": 2134621,
-    "gravity": -30
+    "skyColor": 8823212,
+    "groundColor": 2263842,
+    "gravity": -30,
+    "brightness": 2.5
   }
 }

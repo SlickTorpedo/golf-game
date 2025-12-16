@@ -67,7 +67,8 @@ class MapEditor {
             settings: {
                 skyColor: 0x87CEEB,
                 groundColor: 0x228B22,
-                gravity: -30
+                gravity: -30,
+                brightness: 1.5
             }
         };
         
@@ -558,6 +559,9 @@ class MapEditor {
         });
         document.getElementById('map-brightness').addEventListener('input', (e) => {
             this.updateBrightness(parseFloat(e.target.value));
+        });
+        document.getElementById('preview-brightness').addEventListener('change', (e) => {
+            this.toggleBrightnessPreview(e.target.checked);
         });
         
         // Canvas click and mouse move
@@ -3186,12 +3190,12 @@ class MapEditor {
                     skyColor: 0x87CEEB,
                     groundColor: 0x228B22,
                     gravity: -30,
-                    brightness: 0.8
+                    brightness: 1.5
                 };
             }
             // Add brightness if missing from old maps
             if (this.mapData.settings.brightness === undefined) {
-                this.mapData.settings.brightness = 0.8;
+                this.mapData.settings.brightness = 1.5;
             }
             this.applyMapSettings();
         this.updatePropertiesPanel();
@@ -3229,13 +3233,28 @@ class MapEditor {
     updateBrightness(value) {
         this.mapData.settings.brightness = parseFloat(value);
         
-        // Update ambient light intensity
-        if (this.ambientLight) {
+        // Update ambient light intensity if preview mode is on
+        const previewMode = document.getElementById('preview-brightness').checked;
+        if (this.ambientLight && previewMode) {
             this.ambientLight.intensity = parseFloat(value);
         }
         
         document.getElementById('map-brightness-value').textContent = value;
         console.log('💡 Brightness updated:', value);
+    }
+    
+    toggleBrightnessPreview(enabled) {
+        if (this.ambientLight) {
+            if (enabled) {
+                // Preview mode: use map brightness setting
+                this.ambientLight.intensity = this.mapData.settings.brightness;
+                console.log('👁️ Brightness preview enabled');
+            } else {
+                // Editing mode: use bright light for editing
+                this.ambientLight.intensity = 2.0;
+                console.log('✏️ Editing brightness mode (bright)');
+            }
+        }
     }
     
     createCheckeredTexture(baseColor) {
@@ -3293,10 +3312,11 @@ class MapEditor {
             this.ground.material.needsUpdate = true;
         }
         
-        // Apply brightness
-        const brightness = this.mapData.settings.brightness !== undefined ? this.mapData.settings.brightness : 0.8;
+        // Apply brightness (check preview mode)
+        const brightness = this.mapData.settings.brightness !== undefined ? this.mapData.settings.brightness : 1.5;
+        const previewMode = document.getElementById('preview-brightness').checked;
         if (this.ambientLight) {
-            this.ambientLight.intensity = brightness;
+            this.ambientLight.intensity = previewMode ? brightness : 2.0;
         }
         
         // Update UI controls
