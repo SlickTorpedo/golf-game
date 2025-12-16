@@ -47,6 +47,9 @@ export class SceneManager {
         
         // Fan tracking for animation
         this.fans = [];
+        
+        // Bounce pad tracking for physics
+        this.bouncePads = [];
     }
     
     initGame(players, localPlayerId, socket, audioManager, mapData = null) {
@@ -77,6 +80,7 @@ export class SceneManager {
         // Physics
         console.log('⚙️ Creating physics manager');
         this.physicsManager = new PhysicsManager(this.scene);
+        this.physicsManager.sceneManager = this; // Give physics access to fans
         
         // Powerups
         console.log('💎 Creating powerup manager');
@@ -212,6 +216,13 @@ export class SceneManager {
             if (this.mapData.fans) {
                 this.mapData.fans.forEach(fan => {
                     this.createFan(fan.position, fan.rotationY || 0, fan.angle || 0, fan.strength || 10);
+                });
+            }
+            
+            // Create bounce pads from map
+            if (this.mapData.bouncePads) {
+                this.mapData.bouncePads.forEach(pad => {
+                    this.createBouncePad(pad.position, pad.rotationY || 0, pad.strength || 20);
                 });
             }
             
@@ -433,6 +444,70 @@ export class SceneManager {
         
         console.log('🌀 Fan created at:', position, 'strength:', strength);
         return fanGroup;
+    }
+    
+    createBouncePad(position, rotationY = 0, strength = 20) {
+        const padGroup = new THREE.Group();
+        
+        // Base platform
+        const baseGeometry = new THREE.CylinderGeometry(1.5, 1.5, 0.3, 32);
+        const baseMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x333333,
+            roughness: 0.8,
+            metalness: 0.2
+        });
+        const base = new THREE.Mesh(baseGeometry, baseMaterial);
+        padGroup.add(base);
+        
+        // Bounce surface (green, slightly smaller)
+        const surfaceGeometry = new THREE.CylinderGeometry(1.3, 1.3, 0.1, 32);
+        const surfaceMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x00ff00,
+            roughness: 0.3,
+            metalness: 0.1,
+            emissive: 0x00ff00,
+            emissiveIntensity: 0.2
+        });
+        const surface = new THREE.Mesh(surfaceGeometry, surfaceMaterial);
+        surface.position.y = 0.2;
+        padGroup.add(surface);
+        
+        // Spring indicator lines
+        const lineMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffff00,
+            emissive: 0xffff00,
+            emissiveIntensity: 0.5
+        });
+        for (let i = 0; i < 4; i++) {
+            const angle = (i * Math.PI) / 2;
+            const line = new THREE.Mesh(
+                new THREE.BoxGeometry(0.1, 0.5, 0.1),
+                lineMaterial
+            );
+            line.position.x = Math.cos(angle) * 0.8;
+            line.position.z = Math.sin(angle) * 0.8;
+            line.position.y = -0.1;
+            padGroup.add(line);
+        }
+        
+        padGroup.position.set(position.x, position.y, position.z);
+        padGroup.rotation.y = (rotationY * Math.PI) / 180;
+        
+        this.scene.add(padGroup);
+        
+        // Store for physics
+        this.bouncePads.push({
+            group: padGroup,
+            position: position,
+            strength: strength,
+            radius: 1.5
+        });
+        
+        // Add physics body for collision
+        this.physicsManager.createBouncePad(position, strength, 1.5);
+        
+        console.log('🟢 Bounce pad created at:', position, 'strength:', strength);
+        return padGroup;
     }
     
     createHole(position) {

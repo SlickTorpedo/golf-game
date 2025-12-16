@@ -60,7 +60,8 @@ class MapEditor {
             walls: [],
             ramps: [],
             powerupSpawns: [],
-            fans: []
+            fans: [],
+            bouncePads: []
         };
         
         // Animation tracking for fans
@@ -339,6 +340,52 @@ class MapEditor {
         this.fanBlades.push(bladesGroup);
         
         return fanGroup;
+    }
+    
+    createBouncePad(position, rotationY = 0, strength = 20) {
+        const padGroup = new THREE.Group();
+        
+        // Base platform
+        const baseGeometry = new THREE.CylinderGeometry(1.5, 1.5, 0.3, 32);
+        const baseMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+        const base = new THREE.Mesh(baseGeometry, baseMaterial);
+        padGroup.add(base);
+        
+        // Bounce surface (green, slightly smaller)
+        const surfaceGeometry = new THREE.CylinderGeometry(1.3, 1.3, 0.1, 32);
+        const surfaceMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+        const surface = new THREE.Mesh(surfaceGeometry, surfaceMaterial);
+        surface.position.y = 0.2;
+        padGroup.add(surface);
+        
+        // Spring indicator lines
+        const lineMaterial = new THREE.MeshLambertMaterial({ color: 0xffff00 });
+        for (let i = 0; i < 4; i++) {
+            const angle = (i * Math.PI) / 2;
+            const line = new THREE.Mesh(
+                new THREE.BoxGeometry(0.1, 0.5, 0.1),
+                lineMaterial
+            );
+            line.position.x = Math.cos(angle) * 0.8;
+            line.position.z = Math.sin(angle) * 0.8;
+            line.position.y = -0.1;
+            padGroup.add(line);
+        }
+        
+        padGroup.position.set(position.x, position.y, position.z);
+        padGroup.rotation.y = (rotationY * Math.PI) / 180;
+        
+        const padData = { position, rotationY, strength };
+        padGroup.userData = { 
+            type: 'bounce_pad',
+            data: padData
+        };
+        
+        this.scene.add(padGroup);
+        this.objects.push(padGroup);
+        this.mapData.bouncePads.push(padData);
+        
+        return padGroup;
     }
     
     setupEventListeners() {
@@ -781,6 +828,14 @@ class MapEditor {
                 // Clear snapped rotation after placement
                 this.snappedRotation = null;
                 break;
+            
+            case 'bounce_pad':
+                obj = this.createBouncePad(
+                    { x: position.x, y: position.y !== undefined ? position.y : 0.15, z: position.z },
+                    this.previewRotation,
+                    20 // default strength
+                );
+                break;
                 
             case 'start':
                 // Move existing start point
@@ -977,6 +1032,18 @@ class MapEditor {
             </div>`;
         }
         
+        if (type === 'bounce_pad') {
+            html += `<div class="property-group">
+                <label>Rotation Y (degrees)</label>
+                <input type="number" id="prop-rotation" value="${data.rotationY || 0}" step="15" min="0" max="360">
+            </div>`;
+            
+            html += `<div class="property-group">
+                <label>Bounce Strength</label>
+                <input type="number" id="prop-strength" value="${data.strength || 20}" step="1" min="5" max="50">
+            </div>`;
+        }
+        
         if (type === 'hole') {
             html += `<div class="property-group">
                 <label>Radius</label>
@@ -1032,6 +1099,8 @@ class MapEditor {
                 this.updateRampRotation(parseFloat(rotation.value));
             } else if (type === 'fan') {
                 this.updateFanRotation(parseFloat(rotation.value));
+            } else if (type === 'bounce_pad') {
+                this.updateBouncePadRotation(parseFloat(rotation.value));
             }
         });
         
@@ -1049,7 +1118,14 @@ class MapEditor {
         });
         
         const strength = document.getElementById('prop-strength');
-        if (strength) strength.addEventListener('change', () => this.updateFanStrength(parseFloat(strength.value)));
+        if (strength) strength.addEventListener('change', () => {
+            const type = this.selectedObject?.userData.type;
+            if (type === 'fan') {
+                this.updateFanStrength(parseFloat(strength.value));
+            } else if (type === 'bounce_pad') {
+                this.updateBouncePadStrength(parseFloat(strength.value));
+            }
+        });
         
         const radius = document.getElementById('prop-radius');
         if (radius) radius.addEventListener('change', () => this.updateHoleRadius(parseFloat(radius.value)));
@@ -1139,6 +1215,21 @@ class MapEditor {
     updateFanStrength(value) {
         if (this.selectedObject && this.selectedObject.userData.type === 'fan') {
             this.selectedObject.userData.data.strength = value;
+            this.saveHistory('modify');
+        }
+    }
+    
+    updateBouncePadStrength(value) {
+        if (this.selectedObject && this.selectedObject.userData.type === 'bounce_pad') {
+            this.selectedObject.userData.data.strength = value;
+            this.saveHistory('modify');
+        }
+    }
+    
+    updateBouncePadRotation(value) {
+        if (this.selectedObject && this.selectedObject.userData.type === 'bounce_pad') {
+            this.selectedObject.userData.data.rotationY = value;
+            this.selectedObject.rotation.y = (value * Math.PI) / 180;
             this.saveHistory('modify');
         }
     }
@@ -1920,6 +2011,7 @@ class MapEditor {
                 else if (this.selectedTool === 'fan') yOffset = 2;
                 else if (this.selectedTool === 'start') yOffset = 1;
                 else if (this.selectedTool === 'hole') yOffset = 0.05;
+                else if (this.selectedTool === 'bounce_pad') yOffset = 0.15;
                 
                 intersectPoint.y += yOffset;
                 
@@ -1951,6 +2043,7 @@ class MapEditor {
         else if (this.selectedTool === 'fan') yOffset = 2;
         else if (this.selectedTool === 'start') yOffset = 1;
         else if (this.selectedTool === 'hole') yOffset = 0.05;
+        else if (this.selectedTool === 'bounce_pad') yOffset = 0.15;
         
         intersectPoint.y += yOffset;
         
@@ -2057,6 +2150,24 @@ class MapEditor {
                 fanGroup.rotation.y = (this.previewRotation * Math.PI) / 180;
                 fanGroup.rotation.x = (this.previewAngle * Math.PI) / 180;
                 mesh = fanGroup;
+                break;
+            
+            case 'bounce_pad':
+                // Preview of bounce pad
+                const padGroup = new THREE.Group();
+                
+                geometry = new THREE.CylinderGeometry(1.5, 1.5, 0.3, 32);
+                material = new THREE.MeshLambertMaterial({ 
+                    color: 0x00ff00,
+                    transparent: true,
+                    opacity: 0.5
+                });
+                const pad = new THREE.Mesh(geometry, material);
+                padGroup.add(pad);
+                
+                padGroup.position.y = 0.15;
+                padGroup.rotation.y = (this.previewRotation * Math.PI) / 180;
+                mesh = padGroup;
                 break;
         }
         
@@ -2777,6 +2888,12 @@ class MapEditor {
             if (this.mapData.fans) {
                 this.mapData.fans.forEach(fan => {
                     this.createFan(fan.position, fan.rotationY || 0, fan.angle || 0, fan.strength || 10);
+                });
+            }
+            
+            if (this.mapData.bouncePads) {
+                this.mapData.bouncePads.forEach(pad => {
+                    this.createBouncePad(pad.position, pad.rotationY || 0, pad.strength || 20);
                 });
             }
         this.updatePropertiesPanel();

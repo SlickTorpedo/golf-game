@@ -68,6 +68,47 @@ export class PhysicsManager {
         // Track last safe position (over ground) for each ball
         this.lastSafePositions = new Map();
         
+        // Bounce pad collision listener with cooldown
+        this.world.addEventListener('beginContact', (event) => {
+            const bodyA = event.bodyA;
+            const bodyB = event.bodyB;
+            
+            // Check if collision is between ball and bounce pad
+            let ball = null;
+            let bouncePad = null;
+            
+            if (bodyA.isBouncePad && bodyB.shapes[0] && bodyB.shapes[0].radius === 0.5) {
+                bouncePad = bodyA;
+                ball = bodyB;
+            } else if (bodyB.isBouncePad && bodyA.shapes[0] && bodyA.shapes[0].radius === 0.5) {
+                bouncePad = bodyB;
+                ball = bodyA;
+            }
+            
+            if (ball && bouncePad) {
+                // Initialize cooldown timer if not exists
+                if (!ball.bouncePadCooldown) {
+                    ball.bouncePadCooldown = 0;
+                }
+                
+                // Only bounce if cooldown expired
+                const now = Date.now();
+                if (now - ball.bouncePadCooldown > 500) {
+                    // Store current horizontal velocity
+                    const currentVelX = ball.velocity.x;
+                    const currentVelZ = ball.velocity.z;
+                    
+                    // Replace only Y velocity, keep horizontal momentum
+                    ball.velocity.y = bouncePad.bounceStrength;
+                    ball.velocity.x = currentVelX;
+                    ball.velocity.z = currentVelZ;
+                    
+                    ball.bouncePadCooldown = now;
+                    console.log('🟢 Bounce pad triggered! Y velocity set to:', bouncePad.bounceStrength);
+                }
+            }
+        });
+        
         console.log('⚙️ Physics world initialized');
     }
     
@@ -434,7 +475,79 @@ export class PhysicsManager {
         return this.activePowerupEffects[effectName] === true;
     }
     
+    createBouncePad(position, strength, radius) {
+        // Create a thin cylinder body for the bounce pad
+        const shape = new CANNON.Cylinder(radius, radius, 0.3, 16);
+        const body = new CANNON.Body({
+            mass: 0, // Static
+            position: new CANNON.Vec3(position.x, position.y, position.z),
+            collisionResponse: false // Make it a sensor - detect collisions but don't apply forces
+        });
+        body.addShape(shape);
+        
+        // Rotate to be horizontal
+        body.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+        
+        // Store bounce pad data
+        body.isBouncePad = true;
+        body.bounceStrength = strength;
+        
+        this.world.addBody(body);
+        console.log('🟢 Bounce pad physics body created at:', position);
+        return body;
+    }
+    
     update(deltaTime) {
+        // Apply fan forces to balls
+        if (this.sceneManager && this.sceneManager.fans) {
+            this.meshToBody.forEach((body, mesh) => {
+                // Only apply to balls (spheres with radius 0.5)
+                if (body.shapes[0] && body.shapes[0].radius === 0.5) {
+                    this.sceneManager.fans.forEach(fan => {
+                        const fanPos = fan.group.position;
+                        const ballPos = body.position;
+                        
+                        // Calculate distance from fan
+                        const dx = ballPos.x - fanPos.x;
+                        const dy = ballPos.y - fanPos.y;
+                        const dz = ballPos.z - fanPos.z;
+                        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                        
+                        // Fan range: affects balls within 15 units
+                        const maxRange = 15;
+                        if (distance < maxRange) {
+                            // Get fan direction (forward direction of the fan)
+                            const fanForward = new CANNON.Vec3(0, 0, 1);
+                            const fanRotation = fan.group.rotation;
+                            
+                            // Convert THREE.js Euler to direction vector
+                            const direction = new CANNON.Vec3(
+                                Math.sin(fanRotation.y) * Math.cos(fanRotation.x),
+                                -Math.sin(fanRotation.x),
+                                Math.cos(fanRotation.y) * Math.cos(fanRotation.x)
+                            );
+                            
+                            // Check if ball is in front of the fan (within a cone)
+                            const toBall = new CANNON.Vec3(dx, dy, dz);
+                            toBall.normalize();
+                            const dot = toBall.dot(direction);
+                            
+                            // Only apply force if ball is in front of fan (cone angle ~60 degrees)
+                            if (dot > 0.5) {
+                                // Force decreases with distance
+                                const falloff = 1 - (distance / maxRange);
+                                const forceMagnitude = fan.strength * falloff * dot;
+                                
+                                // Apply force in fan direction
+                                const force = direction.scale(forceMagnitude);
+                                body.applyForce(force, body.position);
+                            }
+                        }
+                    });
+                }
+            });
+        }
+        
         // Check if ball is over hole and apply downward force to make it fall
         if (this.holePosition && this.holeRadius && this.groundBodies.length > 0) {
             this.meshToBody.forEach((body, mesh) => {
