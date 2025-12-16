@@ -1,0 +1,27 @@
+/* Notification Toast */
+.notification {
+    position: fixed !important;
+    top: 20px !important;
+    left: 50% !important;
+    transform: translateX(-50%) translateY(-100px) !important;
+    background: rgba(10, 14, 39, 0.95) !important;
+    backdrop-filter: blur(10px);
+    color: #ffffff !important;
+    padding: 1rem 2rem !important;
+    border-radius: 10px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+    border: 1px solid rgba(0, 212, 170, 0.3) !important;
+    opacity: 0 !important;
+    transition: all 0.3s ease !important;
+    z-index: 10000 !important;
+    pointer-events: none !important;
+    font-size: 1rem;
+    font-weight: 500;
+    min-width: 250px;
+    text-align: center;
+}
+
+.notification.show {
+    transform: translateX(-50%) translateY(0) !important;
+    opacity: 1 !important;
+}

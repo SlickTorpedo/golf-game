@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golf Game - Map Editor</title>
+    <link rel="stylesheet" href="css/editor.css">
+</head>
+<body>
+    <div id="editor-container">
+        <!-- Top Toolbar -->
+        <div id="toolbar">
+            <h1>🏗️ Golf Map Editor</h1>
+            <div id="toolbar-buttons">
+                <button id="new-map" class="toolbar-btn">📄 New Map</button>
+                <button id="save-map" class="toolbar-btn">💾 Save Map</button>
+                <button id="load-map" class="toolbar-btn">📂 Load Map</button>
+                <button id="play-test" class="toolbar-btn">▶️ Test Map</button>
+            </div>
+        </div>
+
+        <!-- Main Editor Area -->
+        <div id="editor-main">
+            <!-- Left Sidebar - Object Palette -->
+            <div id="palette">
+                <h2>Objects</h2>
+                
+                <div class="palette-section">
+                    <h3>🎯 Game Elements</h3>
+                    <button class="palette-item" data-type="start" data-category="game">
+                        <span class="icon">🏁</span>
+                        <span class="label">Start Point</span>
+                    </button>
+                    <button class="palette-item" data-type="hole" data-category="game">
+                        <span class="icon">🕳️</span>
+                        <span class="label">Hole</span>
+                    </button>
+                </div>
+
+                <div class="palette-section">
+                    <h3>🧱 Obstacles</h3>
+                    <button class="palette-item" data-type="wall" data-category="obstacle">
+                        <span class="icon">🧱</span>
+                        <span class="label">Wall</span>
+                    </button>
+                    <button class="palette-item" data-type="ramp" data-category="obstacle">
+                        <span class="icon">🛝</span>
+                        <span class="label">Ramp</span>
+                    </button>
+                </div>
+
+                <div class="palette-section">
+                    <h3>💎 Powerups</h3>
+                    <button class="palette-item" data-type="powerup_spawn" data-category="powerup">
+                        <span class="icon">💎</span>
+                        <span class="label">Powerup Spawn</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Center Canvas -->
+            <div id="viewport">
+                <canvas id="editor-canvas"></canvas>
+                <div id="viewport-controls">
+                    <div class="control-group">
+                        <label>Camera</label>
+                        <button id="view-top">Top View</button>
+                        <button id="view-angle">Angle View</button>
+                    </div>
+                    <div class="control-group">
+                        <label>Grid Snap</label>
+                        <input type="checkbox" id="grid-snap" checked>
+                        <input type="number" id="grid-size" value="1" min="0.5" max="5" step="0.5">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar - Properties -->
+            <div id="properties">
+                <h2>Properties</h2>
+                <div id="properties-content">
+                    <p class="hint">Select an object to edit its properties</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map List Modal -->
+        <div id="map-list-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2>Load Map</h2>
+                <div id="map-list"></div>
+                <button id="close-modal" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Save Map Modal -->
+        <div id="save-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2>Save Map</h2>
+                <input type="text" id="map-name" placeholder="Enter map name">
+                <div class="modal-buttons">
+                    <button id="confirm-save" class="btn-primary">Save</button>
+                    <button id="cancel-save" class="btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.152.2/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.152.2/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module" src="js/map-editor.js"></script>
+</body>
+</html>
