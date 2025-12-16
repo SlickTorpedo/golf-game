@@ -220,15 +220,16 @@ export class PhysicsManager {
         return body;
     }
     
-    createWall(position, size) {
+    createWall(position, size, rotationY = 0, color = 0x8b4513) {
         // Create visual mesh
         const geometry = new THREE.BoxGeometry(size.x, size.y, size.z);
         const material = new THREE.MeshStandardMaterial({
-            color: 0x8b4513,
+            color: color,
             roughness: 0.8,
             metalness: 0.2
         });
         const mesh = new THREE.Mesh(geometry, material);
+        mesh.rotation.y = (rotationY * Math.PI) / 180;
         mesh.position.set(position.x, position.y, position.z);
         mesh.castShadow = true;
         mesh.receiveShadow = true;
@@ -251,11 +252,11 @@ export class PhysicsManager {
         return { mesh, body };
     }
     
-    createRamp(position, size, rotationY = 0, angle = 15) {
+    createRamp(position, size, rotationY = 0, angle = 15, color = 0x6b8e23) {
         // Create visual mesh
         const geometry = new THREE.BoxGeometry(size.x, size.y, size.z);
         const material = new THREE.MeshLambertMaterial({
-            color: 0x6b8e23 // Olive green for ramps
+            color: color
         });
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.set(position.x, position.y, position.z);
@@ -577,16 +578,19 @@ export class PhysicsManager {
                 }
                 
                 // Safety check: if ball falls below floor (except in hole), teleport it back up
-                const dx = body.position.x - (this.holePosition?.x || 99999);
-                const dz = body.position.z - (this.holePosition?.z || 99999);
-                const distance2D = Math.sqrt(dx * dx + dz * dz);
-                const notInHole = distance2D > (this.holeRadius || 0) + 2;
-                
-                if (body.position.y < -0.5 && notInHole) {
-                    console.warn('⚠️ Ball clipped through floor! Teleporting back up');
-                    body.position.y = 1;
-                    body.velocity.set(0, 0, 0);
-                    body.angularVelocity.set(0, 0, 0);
+                // Don't apply if ball has scored (holeSettling === 2)
+                if (body.holeSettling !== 2) {
+                    const dx = body.position.x - (this.holePosition?.x || 99999);
+                    const dz = body.position.z - (this.holePosition?.z || 99999);
+                    const distance2D = Math.sqrt(dx * dx + dz * dz);
+                    const notInHole = distance2D > (this.holeRadius || 0) + 2;
+                    
+                    if (body.position.y < -0.5 && notInHole) {
+                        console.warn('⚠️ Ball clipped through floor! Teleporting back up');
+                        body.position.y = 1;
+                        body.velocity.set(0, 0, 0);
+                        body.angularVelocity.set(0, 0, 0);
+                    }
                 }
             }
             

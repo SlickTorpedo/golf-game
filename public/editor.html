@@ -26,6 +26,30 @@
                 <h2>Objects</h2>
                 
                 <div class="palette-section">
+                    <h3>🛠️ Tools</h3>
+                    <button class="palette-item" data-type="select" data-category="tool">
+                        <span class="icon">👆</span>
+                        <span class="label">Select</span>
+                    </button>
+                    <button class="palette-item" data-type="move" data-category="tool">
+                        <span class="icon">✋</span>
+                        <span class="label">Move</span>
+                    </button>
+                    <button class="palette-item" data-type="extrude" data-category="tool">
+                        <span class="icon">↔️</span>
+                        <span class="label">Extrude</span>
+                    </button>
+                    <button class="palette-item" data-type="delete" data-category="tool">
+                        <span class="icon">🗑️</span>
+                        <span class="label">Delete</span>
+                    </button>
+                    <button class="palette-item" data-type="paint" data-category="tool">
+                        <span class="icon">🎨</span>
+                        <span class="label">Paint Bucket</span>
+                    </button>
+                </div>
+                
+                <div class="palette-section">
                     <h3>🎯 Game Elements</h3>
                     <button class="palette-item" data-type="start" data-category="game">
                         <span class="icon">🏁</span>
@@ -56,6 +80,14 @@
                         <span class="label">Powerup Spawn</span>
                     </button>
                 </div>
+
+                <div class="palette-section">
+                    <h3>🌪️ Utilities</h3>
+                    <button class="palette-item" data-type="fan" data-category="utility">
+                        <span class="icon">🌀</span>
+                        <span class="label">Fan</span>
+                    </button>
+                </div>
             </div>
 
             <!-- Center Canvas -->
@@ -80,6 +112,12 @@
                 <h2>Properties</h2>
                 <div id="properties-content">
                     <p class="hint">Select an object to edit its properties</p>
+                </div>
+                <div id="placement-controls">
+                    <h2>Placement Settings</h2>
+                    <div id="placement-content">
+                        <p class="hint">Select a tool to customize placement</p>
+                    </div>
                 </div>
             </div>
         </div>

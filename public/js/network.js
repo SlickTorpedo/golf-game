@@ -19,6 +19,9 @@ export class NetworkManager {
         
         this.setupSocketEvents();
         this.setupUIEvents();
+        
+        // Check if this is a playtest session
+        this.checkPlaytestMode();
     }
     
     setupSocketEvents() {
@@ -269,6 +272,48 @@ export class NetworkManager {
                 showNotification('Error loading maps');
                 resolve(null);
             }
+        });
+    }
+    
+    checkPlaytestMode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isPlaytest = urlParams.get('playtest') === 'true';
+        const mapName = urlParams.get('map');
+        
+        if (isPlaytest) {
+            // Wait for socket to connect
+            if (this.socket.connected) {
+                this.startPlaytest(mapName);
+            } else {
+                this.socket.once('connect', () => {
+                    this.startPlaytest(mapName);
+                });
+            }
+        }
+    }
+    
+    startPlaytest(mapName) {
+        console.log('🎮 Starting playtest mode with map:', mapName);
+        
+        // Set a playtest player name
+        const playerName = 'Playtester';
+        this.gameState.playerName = playerName;
+        
+        // Create room
+        this.socket.emit('create-room', { playerName });
+        
+        // Once room is created, start game immediately
+        this.socket.once('room-created', (data) => {
+            console.log('✅ Room created for playtest:', data.roomCode);
+            this.gameState.roomCode = data.roomCode;
+            this.gameState.players = data.players;
+            this.gameState.isHost = true;
+            
+            // Start game immediately with the specified map
+            setTimeout(() => {
+                console.log('🚀 Auto-starting game with map:', mapName);
+                this.socket.emit('start-game', { mapName: mapName });
+            }, 100);
         });
     }
     

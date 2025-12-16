@@ -44,6 +44,9 @@ export class SceneManager {
         this.lastSyncTime = 0;
         this.syncInterval = 50; // Sync every 50ms (20 times per second)
         this.remotePlayerTargets = new Map(); // Target positions for smooth interpolation
+        
+        // Fan tracking for animation
+        this.fans = [];
     }
     
     initGame(players, localPlayerId, socket, audioManager, mapData = null) {
@@ -194,14 +197,21 @@ export class SceneManager {
             // Create walls from map
             if (this.mapData.walls) {
                 this.mapData.walls.forEach(wall => {
-                    this.physicsManager.createWall(wall.position, wall.size);
+                    this.physicsManager.createWall(wall.position, wall.size, wall.rotationY || 0, wall.color);
                 });
             }
             
             // Create ramps from map
             if (this.mapData.ramps) {
                 this.mapData.ramps.forEach(ramp => {
-                    this.physicsManager.createRamp(ramp.position, ramp.size, ramp.rotationY, ramp.angle);
+                    this.physicsManager.createRamp(ramp.position, ramp.size, ramp.rotationY, ramp.angle, ramp.color);
+                });
+            }
+            
+            // Create fans from map
+            if (this.mapData.fans) {
+                this.mapData.fans.forEach(fan => {
+                    this.createFan(fan.position, fan.rotationY || 0, fan.angle || 0, fan.strength || 10);
                 });
             }
             
@@ -333,6 +343,96 @@ export class SceneManager {
         this.playerBalls.set(playerId, ball);
         
         return ball;
+    }
+    
+    createFan(position, rotationY = 0, angle = 0, strength = 10) {
+        // Create fan group
+        const fanGroup = new THREE.Group();
+        
+        // Housing cylinder
+        const housingGeometry = new THREE.CylinderGeometry(1.5, 1.5, 0.5, 32);
+        const housingMaterial = new THREE.MeshLambertMaterial({ color: 0x404040 });
+        const housing = new THREE.Mesh(housingGeometry, housingMaterial);
+        housing.rotation.x = Math.PI / 2;
+        fanGroup.add(housing);
+        
+        // Grille - positioned behind the blades
+        const grilleGeometry = new THREE.TorusGeometry(1.3, 0.05, 8, 32);
+        const grilleMaterial = new THREE.MeshLambertMaterial({ color: 0x606060 });
+        const grille = new THREE.Mesh(grilleGeometry, grilleMaterial);
+        grille.position.z = 0.2;  // Moved back from 0.3
+        fanGroup.add(grille);
+        
+        // Cross bars - positioned behind the blades
+        const crossBar1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.4, 0.1), grilleMaterial);
+        crossBar1.position.z = 0.2;  // Moved back from 0.3
+        fanGroup.add(crossBar1);
+        
+        const crossBar2 = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.1, 0.1), grilleMaterial);
+        crossBar2.position.z = 0.2;  // Moved back from 0.3
+        fanGroup.add(crossBar2);
+        
+        // Spinning blades - now in front of the grille
+        const bladesGroup = new THREE.Group();
+        const bladeGeometry = new THREE.BoxGeometry(0.15, 1.8, 0.05);
+        const bladeMaterial = new THREE.MeshLambertMaterial({ color: 0xcccccc, side: THREE.DoubleSide });
+        
+        for (let i = 0; i < 3; i++) {
+            const blade = new THREE.Mesh(bladeGeometry, bladeMaterial);
+            blade.rotation.z = (i * Math.PI * 2) / 3;
+            bladesGroup.add(blade);
+        }
+        
+        bladesGroup.position.z = 0.35;  // Moved forward from 0.15 to be in front
+        fanGroup.add(bladesGroup);
+        
+        // Create particle system
+        const particleCount = 30;
+        const particleGeometry = new THREE.BufferGeometry();
+        const particlePositions = new Float32Array(particleCount * 3);
+        const particleVelocities = [];
+        
+        for (let i = 0; i < particleCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.random() * 1.2;
+            particlePositions[i * 3] = Math.cos(angle) * radius;
+            particlePositions[i * 3 + 1] = Math.sin(angle) * radius;
+            particlePositions[i * 3 + 2] = Math.random() * 5;
+            particleVelocities.push(Math.random() * 0.5 + 0.5);
+        }
+        
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+        
+        const particleMaterial = new THREE.PointsMaterial({
+            color: 0x88ccff,
+            size: 0.15,
+            transparent: true,
+            opacity: 0.4,
+            blending: THREE.AdditiveBlending
+        });
+        
+        const particles = new THREE.Points(particleGeometry, particleMaterial);
+        particles.userData.velocities = particleVelocities;
+        fanGroup.add(particles);
+        
+        // Position and rotate
+        fanGroup.position.set(position.x, position.y, position.z);
+        fanGroup.rotation.y = (rotationY * Math.PI) / 180;
+        fanGroup.rotation.x = (angle * Math.PI) / 180;
+        
+        this.scene.add(fanGroup);
+        
+        // Store for animation and physics
+        this.fans.push({
+            group: fanGroup,
+            blades: bladesGroup,
+            particles: particles,
+            strength: strength,
+            direction: new THREE.Vector3(0, 0, 1).applyEuler(fanGroup.rotation)
+        });
+        
+        console.log('🌀 Fan created at:', position, 'strength:', strength);
+        return fanGroup;
     }
     
     createHole(position) {
@@ -656,14 +756,14 @@ export class SceneManager {
             // Recreate walls from map
             if (this.mapData.walls) {
                 this.mapData.walls.forEach(wall => {
-                    this.physicsManager.createWall(wall.position, wall.size);
+                    this.physicsManager.createWall(wall.position, wall.size, wall.rotationY || 0, wall.color);
                 });
             }
             
             // Recreate ramps from map
             if (this.mapData.ramps) {
                 this.mapData.ramps.forEach(ramp => {
-                    this.physicsManager.createRamp(ramp.position, ramp.size, ramp.rotationY, ramp.angle);
+                    this.physicsManager.createRamp(ramp.position, ramp.size, ramp.rotationY, ramp.angle, ramp.color);
                 });
             }
         } else {
@@ -830,6 +930,32 @@ export class SceneManager {
         if (this.physicsManager) {
             this.physicsManager.update(deltaTime);
         }
+        
+        // Animate fans
+        this.fans.forEach(fan => {
+            if (fan.blades) {
+                fan.blades.rotation.z += 0.1;
+            }
+            
+            if (fan.particles) {
+                const positions = fan.particles.geometry.attributes.position.array;
+                const velocities = fan.particles.userData.velocities;
+                
+                for (let i = 0; i < positions.length / 3; i++) {
+                    positions[i * 3 + 2] += velocities[i] * 0.05;
+                    
+                    if (positions[i * 3 + 2] > 5) {
+                        positions[i * 3 + 2] = 0;
+                        const angle = Math.random() * Math.PI * 2;
+                        const radius = Math.random() * 1.2;
+                        positions[i * 3] = Math.cos(angle) * radius;
+                        positions[i * 3 + 1] = Math.sin(angle) * radius;
+                    }
+                }
+                
+                fan.particles.geometry.attributes.position.needsUpdate = true;
+            }
+        });
         
         // Update powerups
         if (this.powerupManager && this.localBall) {
