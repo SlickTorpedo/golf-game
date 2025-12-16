@@ -318,6 +318,49 @@ export class PhysicsManager {
         console.log('✅ Physics world rebuilt and warmed up');
     }
     
+    createWallTexture(baseColor) {
+        // Create a canvas for subtle randomized pattern
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        
+        // Convert hex color to RGB
+        const color = new THREE.Color(baseColor);
+        const r = Math.floor(color.r * 255);
+        const g = Math.floor(color.g * 255);
+        const b = Math.floor(color.b * 255);
+        
+        // Base color
+        const baseColorStr = `rgb(${r}, ${g}, ${b})`;
+        ctx.fillStyle = baseColorStr;
+        ctx.fillRect(0, 0, 256, 256);
+        
+        // Add subtle randomized checkered accents (spread out)
+        const cellSize = 32;
+        for (let y = 0; y < 256; y += cellSize) {
+            for (let x = 0; x < 256; x += cellSize) {
+                // Only draw accent on some cells randomly
+                if (Math.random() > 0.6) {
+                    // Slightly darker or lighter shade
+                    const variation = Math.random() > 0.5 ? 0.92 : 0.85;
+                    const r2 = Math.floor(r * variation);
+                    const g2 = Math.floor(g * variation);
+                    const b2 = Math.floor(b * variation);
+                    ctx.fillStyle = `rgb(${r2}, ${g2}, ${b2})`;
+                    ctx.fillRect(x, y, cellSize, cellSize);
+                }
+            }
+        }
+        
+        // Create texture from canvas
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        
+        return texture;
+    }
+    
     createGroundBody(holePosition = null, holeRadius = 0) {
         // Create ONE continuous ground - no segmentation!
         const groundSize = 100;
@@ -370,8 +413,11 @@ export class PhysicsManager {
     createWall(position, size, rotationY = 0, color = 0x8b4513) {
         // Create visual mesh
         const geometry = new THREE.BoxGeometry(size.x, size.y, size.z);
+        const wallTexture = this.createWallTexture(color);
+        wallTexture.repeat.set(Math.max(1, size.x / 2), Math.max(1, size.y / 2));
         const material = new THREE.MeshStandardMaterial({
             color: color,
+            map: wallTexture,
             roughness: 0.8,
             metalness: 0.2
         });

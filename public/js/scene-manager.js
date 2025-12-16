@@ -111,8 +111,10 @@ export class SceneManager {
         });
         this.renderer.setSize(container.clientWidth, container.clientHeight);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        this.renderer.shadowMap.enabled = false; // No shadows for flat look
+        this.renderer.shadowMap.enabled = false; // No shadows for performance
         this.renderer.outputEncoding = THREE.sRGBEncoding;
+        this.renderer.toneMapping = THREE.LinearToneMapping;
+        this.renderer.toneMappingExposure = 1.4; // Brighter, more vibrant
         container.appendChild(this.renderer.domElement);
         
         // Controls
@@ -140,18 +142,23 @@ export class SceneManager {
         console.log('💡 Setting up stylized lighting');
         
         // Ambient light for base illumination
-        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-        this.scene.add(this.ambientLight);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+        this.scene.add(ambientLight);
         
-        // Directional light from above for definition (no shadows)
-        const mainLight = new THREE.DirectionalLight(0xffffff, 0.6);
-        mainLight.position.set(0, 50, 0);
+        // Strong directional light from above-front for cartoon shading
+        const mainLight = new THREE.DirectionalLight(0xffffff, 2.5);
+        mainLight.position.set(5, 50, 20);
         this.scene.add(mainLight);
         
-        // Soft fill light for better form definition
-        const fillLight = new THREE.DirectionalLight(0xadd8e6, 0.3);
-        fillLight.position.set(-30, 20, -30);
+        // Side fill light for better form definition
+        const fillLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        fillLight.position.set(-30, 30, -10);
         this.scene.add(fillLight);
+        
+        // Back light for rim lighting effect
+        const backLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        backLight.position.set(0, 20, -30);
+        this.scene.add(backLight);
         
         // Ground - plane with checkered pattern
         console.log('🌱 Creating ground plane');
@@ -424,12 +431,54 @@ export class SceneManager {
         return texture;
     }
     
+    createWallTexture(baseColor) {
+        // Create a canvas for subtle randomized pattern
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        
+        // Convert hex color to RGB
+        const color = new THREE.Color(baseColor);
+        const r = Math.floor(color.r * 255);
+        const g = Math.floor(color.g * 255);
+        const b = Math.floor(color.b * 255);
+        
+        // Base color
+        const baseColorStr = `rgb(${r}, ${g}, ${b})`;
+        ctx.fillStyle = baseColorStr;
+        ctx.fillRect(0, 0, 256, 256);
+        
+        // Add subtle randomized checkered accents (spread out)
+        const cellSize = 32;
+        for (let y = 0; y < 256; y += cellSize) {
+            for (let x = 0; x < 256; x += cellSize) {
+                // Only draw accent on some cells randomly
+                if (Math.random() > 0.6) {
+                    // Slightly darker or lighter shade
+                    const variation = Math.random() > 0.5 ? 0.92 : 0.85;
+                    const r2 = Math.floor(r * variation);
+                    const g2 = Math.floor(g * variation);
+                    const b2 = Math.floor(b * variation);
+                    ctx.fillStyle = `rgb(${r2}, ${g2}, ${b2})`;
+                    ctx.fillRect(x, y, cellSize, cellSize);
+                }
+            }
+        }
+        
+        // Create texture from canvas
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        
+        return texture;
+    }
+    
     applyMapSettings(settings = null) {
         const mapSettings = settings || (this.mapData && this.mapData.settings) || {
             skyColor: 0x87CEEB,
             groundColor: 0x228B22,
-            gravity: -30,
-            brightness: 1.5
+            gravity: -30
         };
         
         // Apply sky color
@@ -445,18 +494,12 @@ export class SceneManager {
             this.ground.material.needsUpdate = true;
         }
         
-        // Apply brightness to ambient light
-        const brightness = mapSettings.brightness !== undefined ? mapSettings.brightness : 1.5;
-        if (this.ambientLight) {
-            this.ambientLight.intensity = brightness;
-        }
-        
         // Apply gravity to physics world
         if (this.physicsManager) {
             this.physicsManager.setGravity(mapSettings.gravity);
         }
         
-        console.log('✅ Map settings applied - Sky:', mapSettings.skyColor.toString(16), 'Ground:', mapSettings.groundColor.toString(16), 'Gravity:', mapSettings.gravity, 'Brightness:', brightness);
+        console.log('✅ Map settings applied - Sky:', mapSettings.skyColor.toString(16), 'Ground:', mapSettings.groundColor.toString(16), 'Gravity:', mapSettings.gravity);
     }
     
     createFan(position, rotationY = 0, angle = 0, strength = 10) {

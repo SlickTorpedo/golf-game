@@ -67,8 +67,7 @@ class MapEditor {
             settings: {
                 skyColor: 0x87CEEB,
                 groundColor: 0x228B22,
-                gravity: -30,
-                brightness: 1.5
+                gravity: -30
             }
         };
         
@@ -121,10 +120,10 @@ class MapEditor {
         };
         
         // Lighting
-        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        this.scene.add(this.ambientLight);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 5.0); // Constant bright lighting
+        this.scene.add(ambientLight);
         
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 2.0);
         directionalLight.position.set(10, 20, 10);
         this.scene.add(directionalLight);
         
@@ -147,6 +146,9 @@ class MapEditor {
         // Create initial objects
         this.createStartPoint();
         this.createHole();
+        
+        // Apply map settings to set proper sky color and ground texture
+        this.applyMapSettings();
         
         // Save initial state
         this.saveHistory('init');
@@ -191,7 +193,12 @@ class MapEditor {
     createWall(position, size, rotationY = 0, color = 0x8B4513) {
         const geometry = new THREE.BoxGeometry(size.x, size.y, size.z);
         const actualColor = (color !== undefined && color !== null) ? color : 0x8B4513;
-        const material = new THREE.MeshLambertMaterial({ color: actualColor });
+        const wallTexture = this.createWallTexture(actualColor);
+        wallTexture.repeat.set(Math.max(1, size.x / 2), Math.max(1, size.y / 2));
+        const material = new THREE.MeshLambertMaterial({ 
+            color: actualColor,
+            map: wallTexture
+        });
         const wall = new THREE.Mesh(geometry, material);
         wall.position.set(position.x, position.y, position.z);
         wall.rotation.y = (rotationY * Math.PI) / 180;
@@ -556,12 +563,6 @@ class MapEditor {
         });
         document.getElementById('map-gravity').addEventListener('input', (e) => {
             this.updateGravity(parseFloat(e.target.value));
-        });
-        document.getElementById('map-brightness').addEventListener('input', (e) => {
-            this.updateBrightness(parseFloat(e.target.value));
-        });
-        document.getElementById('preview-brightness').addEventListener('change', (e) => {
-            this.toggleBrightnessPreview(e.target.checked);
         });
         
         // Canvas click and mouse move
@@ -3189,13 +3190,8 @@ class MapEditor {
                 this.mapData.settings = {
                     skyColor: 0x87CEEB,
                     groundColor: 0x228B22,
-                    gravity: -30,
-                    brightness: 1.5
+                    gravity: -30
                 };
-            }
-            // Add brightness if missing from old maps
-            if (this.mapData.settings.brightness === undefined) {
-                this.mapData.settings.brightness = 1.5;
             }
             this.applyMapSettings();
         this.updatePropertiesPanel();
@@ -3230,32 +3226,7 @@ class MapEditor {
         console.log('⚖️ Gravity updated:', value);
     }
     
-    updateBrightness(value) {
-        this.mapData.settings.brightness = parseFloat(value);
-        
-        // Update ambient light intensity if preview mode is on
-        const previewMode = document.getElementById('preview-brightness').checked;
-        if (this.ambientLight && previewMode) {
-            this.ambientLight.intensity = parseFloat(value);
-        }
-        
-        document.getElementById('map-brightness-value').textContent = value;
-        console.log('💡 Brightness updated:', value);
-    }
-    
-    toggleBrightnessPreview(enabled) {
-        if (this.ambientLight) {
-            if (enabled) {
-                // Preview mode: use map brightness setting
-                this.ambientLight.intensity = this.mapData.settings.brightness;
-                console.log('👁️ Brightness preview enabled');
-            } else {
-                // Editing mode: use bright light for editing
-                this.ambientLight.intensity = 2.0;
-                console.log('✏️ Editing brightness mode (bright)');
-            }
-        }
-    }
+
     
     createCheckeredTexture(baseColor) {
         // Create a canvas for the checkered pattern
@@ -3296,6 +3267,49 @@ class MapEditor {
         return texture;
     }
     
+    createWallTexture(baseColor) {
+        // Create a canvas for subtle randomized pattern
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        
+        // Convert hex color to RGB
+        const color = new THREE.Color(baseColor);
+        const r = Math.floor(color.r * 255);
+        const g = Math.floor(color.g * 255);
+        const b = Math.floor(color.b * 255);
+        
+        // Base color
+        const baseColorStr = `rgb(${r}, ${g}, ${b})`;
+        ctx.fillStyle = baseColorStr;
+        ctx.fillRect(0, 0, 256, 256);
+        
+        // Add subtle randomized checkered accents (spread out)
+        const cellSize = 32;
+        for (let y = 0; y < 256; y += cellSize) {
+            for (let x = 0; x < 256; x += cellSize) {
+                // Only draw accent on some cells randomly
+                if (Math.random() > 0.6) {
+                    // Slightly darker or lighter shade
+                    const variation = Math.random() > 0.5 ? 0.92 : 0.85;
+                    const r2 = Math.floor(r * variation);
+                    const g2 = Math.floor(g * variation);
+                    const b2 = Math.floor(b * variation);
+                    ctx.fillStyle = `rgb(${r2}, ${g2}, ${b2})`;
+                    ctx.fillRect(x, y, cellSize, cellSize);
+                }
+            }
+        }
+        
+        // Create texture from canvas
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        
+        return texture;
+    }
+    
     applyMapSettings() {
         // Apply sky color
         const skyColor = this.mapData.settings.skyColor;
@@ -3312,20 +3326,11 @@ class MapEditor {
             this.ground.material.needsUpdate = true;
         }
         
-        // Apply brightness (check preview mode)
-        const brightness = this.mapData.settings.brightness !== undefined ? this.mapData.settings.brightness : 1.5;
-        const previewMode = document.getElementById('preview-brightness').checked;
-        if (this.ambientLight) {
-            this.ambientLight.intensity = previewMode ? brightness : 2.0;
-        }
-        
         // Update UI controls
         document.getElementById('map-sky-color').value = '#' + skyColor.toString(16).padStart(6, '0');
         document.getElementById('map-ground-color').value = '#' + groundColor.toString(16).padStart(6, '0');
         document.getElementById('map-gravity').value = this.mapData.settings.gravity;
         document.getElementById('map-gravity-value').textContent = this.mapData.settings.gravity;
-        document.getElementById('map-brightness').value = brightness;
-        document.getElementById('map-brightness-value').textContent = brightness;
         
         console.log('✅ Map settings applied');
     }
