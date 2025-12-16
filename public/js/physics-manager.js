@@ -343,7 +343,7 @@ export class PhysicsManager {
                 // Also increase wall bounce for crazy knockback
                 this.world.contactmaterials.forEach(cm => {
                     if (cm.materials.includes(this.ballMaterial) && cm.materials.includes(this.wallMaterial)) {
-                        cm.restitution = 2.5; // 2.5x wall bounce for super bouncy feel
+                        cm.restitution = 3.0; // 3x wall bounce for maximum chaos
                     }
                 });
                 console.log('💥 Super Boost ready for next shot! 3X POWER + CRAZY BOUNCES!');
@@ -500,7 +500,7 @@ export class PhysicsManager {
                 
                 // Speed cap: adjust these values to change max speeds
                 const normalMaxSpeed = 100;
-                const superBoostBouncingMaxSpeed = 70; // Lower cap during super boost bouncing to prevent clipping
+                const superBoostBouncingMaxSpeed = 90; // Higher cap now that tunneling is fixed
                 const maxSpeed = this.activePowerupEffects.superBoostBouncing ? superBoostBouncingMaxSpeed : normalMaxSpeed;
                 const speed = body.velocity.length();
                 
@@ -540,9 +540,9 @@ export class PhysicsManager {
                 body.previousPosition.copy(body.position);
                 
                 // Add energy loss over time to prevent infinite bouncing
-                // Apply aggressive damping during super boost bouncing to prevent wall clipping
+                // Apply light damping during super boost bouncing (tunneling is now prevented by raycast)
                 if (this.activePowerupEffects.superBoostBouncing && speed > 5) {
-                    const dampingFactor = 0.99; // Moderate damping during super boost
+                    const dampingFactor = 0.995; // Light damping - anti-tunneling handles the rest
                     body.velocity.scale(dampingFactor, body.velocity);
                 } else if (this.activePowerupEffects.superBounce && speed > 5) {
                     const dampingFactor = 0.992; // Stronger damping during super bounce

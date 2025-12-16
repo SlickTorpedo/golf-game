@@ -300,12 +300,12 @@ export class ShotMechanics {
             const maxDistance = 15;
             let power = Math.min(distance / maxDistance, 1.0);
             
-            // Apply exponential curve: small drags are even smaller, large drags are bigger
-            // Using power^2 gives nice exponential feel
-            power = Math.pow(power, 2);
+            // Apply exponential curve for more dramatic power scaling
+            // Using power^1.5 gives better feel - small drags still go far, full power is crazy
+            power = Math.pow(power, 1.5);
             
             direction.normalize();
-            const velocity = direction.multiplyScalar(power * 30);
+            const velocity = direction.multiplyScalar(power * 50); // Increased from 30 to 50
             
             console.log('⛳ Shooting with power:', (power * 100).toFixed(0) + '%', 'velocity:', velocity);
             
