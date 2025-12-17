@@ -412,3 +412,74 @@ body {
 ::-webkit-scrollbar-thumb:hover {
     background: #5a5a5a;
 }
+
+/* Hole List */
+#hole-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.hole-item {
+    background: #3a3a3a;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.hole-item:hover {
+    background: #4a4a4a;
+}
+
+.hole-item.active {
+    background: #4fc3f7;
+    color: #1a1a1a;
+    font-weight: bold;
+}
+
+.hole-item-info {
+    flex: 1;
+}
+
+.hole-item-number {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.hole-item-par {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.hole-item-delete {
+    background: #d32f2f;
+    color: white;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.hole-item-delete:hover {
+    background: #f44336;
+}
+
+.hole-item.active .hole-item-delete {
+    background: #c62828;
+}
+
+.hole-item.active .hole-item-delete:hover {
+    background: #d32f2f;
+}

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { MultiHoleManager } from './editor-multi-hole.js';
 
 class MapEditor {
     constructor() {
@@ -85,6 +86,10 @@ class MapEditor {
         
         this.init();
         this.setupEventListeners();
+        
+        // Initialize multi-hole manager
+        this.multiHoleManager = new MultiHoleManager(this);
+        
         this.animate();
     }
     
@@ -1884,11 +1889,15 @@ class MapEditor {
         
         this.mapData.name = mapName;
         
+        // Get multi-hole format data
+        const saveData = this.multiHoleManager ? this.multiHoleManager.getMapData() : this.mapData;
+        saveData.name = mapName;
+        
         try {
             const response = await fetch('/api/save-map', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.mapData)
+                body: JSON.stringify(saveData)
             });
             
             if (response.ok) {
@@ -1940,33 +1949,42 @@ class MapEditor {
             const response = await fetch(`/api/map/${encodeURIComponent(mapName)}`);
             const mapData = await response.json();
             
-            // Clear current map
-            this.objects.forEach(obj => this.scene.remove(obj));
-            this.objects = [];
+            // Load map name
+            this.mapData.name = mapData.name;
             
-            // Load new map data
-            this.mapData = mapData;
-            
-            // Recreate objects
-            this.createStartPoint();
-            this.createHole();
-            
-            mapData.walls.forEach(wall => {
-                this.createWall(wall.position, wall.size, wall.rotationY || 0, wall.color);
-            });
-            
-            mapData.ramps.forEach(ramp => {
-                this.createRamp(ramp.position, ramp.size, ramp.rotationY, ramp.angle, ramp.color);
-            });
-            
-            mapData.powerupSpawns.forEach(spawn => {
-                this.createPowerupSpawn(spawn.position, spawn.color);
-            });
-            
-            if (mapData.fans) {
-                mapData.fans.forEach(fan => {
-                    this.createFan(fan.position, fan.rotationY || 0, fan.angle || 0, fan.strength || 10);
+            // Use multi-hole manager to load
+            if (this.multiHoleManager) {
+                this.multiHoleManager.loadMapData(mapData);
+            } else {
+                // Fallback to old method
+                // Clear current map
+                this.objects.forEach(obj => this.scene.remove(obj));
+                this.objects = [];
+                
+                // Load new map data
+                this.mapData = mapData;
+                
+                // Recreate objects
+                this.createStartPoint();
+                this.createHole();
+                
+                mapData.walls.forEach(wall => {
+                    this.createWall(wall.position, wall.size, wall.rotationY || 0, wall.color);
                 });
+                
+                mapData.ramps.forEach(ramp => {
+                    this.createRamp(ramp.position, ramp.size, ramp.rotationY, ramp.angle, ramp.color);
+                });
+                
+                mapData.powerupSpawns.forEach(spawn => {
+                    this.createPowerupSpawn(spawn.position, spawn.color);
+                });
+                
+                if (mapData.fans) {
+                    mapData.fans.forEach(fan => {
+                        this.createFan(fan.position, fan.rotationY || 0, fan.angle || 0, fan.strength || 10);
+                    });
+                }
             }
             
             document.getElementById('map-list-modal').classList.add('hidden');
@@ -1986,12 +2004,15 @@ class MapEditor {
     playTest() {
         // Save current map and open game in new tab
         const mapName = '_playtest_';
-        this.mapData.name = mapName;
+        
+        // Get multi-hole format data
+        const saveData = this.multiHoleManager ? this.multiHoleManager.getMapData() : this.mapData;
+        saveData.name = mapName;
         
         fetch('/api/save-map', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(this.mapData)
+            body: JSON.stringify(saveData)
         }).then(() => {
             window.open(`/index.html?playtest=true&map=${mapName}`, '_blank');
         });

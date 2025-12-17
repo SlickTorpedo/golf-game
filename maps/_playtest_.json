@@ -1,23 +1,29 @@
 {
   "name": "_playtest_",
-  "startPoint": {
-    "x": 0,
-    "y": 0,
-    "z": 30
-  },
-  "hole": {
-    "x": 0,
-    "y": 0,
-    "z": -30,
-    "radius": 1.2
-  },
-  "walls": [],
-  "ramps": [],
-  "powerupSpawns": [],
-  "fans": [],
-  "bouncePads": [],
-  "bumpers": [],
-  "speedBoosts": [],
+  "holes": [
+    {
+      "number": 1,
+      "par": 3,
+      "startPoint": {
+        "x": 0,
+        "y": 0,
+        "z": 30
+      },
+      "hole": {
+        "x": 0,
+        "y": 0,
+        "z": -30,
+        "radius": 1.2
+      },
+      "walls": [],
+      "ramps": [],
+      "powerupSpawns": [],
+      "fans": [],
+      "bouncePads": [],
+      "bumpers": [],
+      "speedBoosts": []
+    }
+  ],
   "settings": {
     "skyColor": 8900331,
     "groundColor": 2263842,

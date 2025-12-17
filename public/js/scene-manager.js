@@ -63,39 +63,90 @@ export class SceneManager {
         this.speedBoosts = [];
     }
     
-    normalizeMapData(mapData) {
-        // Convert old single-hole format to new multi-hole format
-        if (!mapData) return null;
-        
-        // If already in new format (has holes array), return as-is
-        if (mapData.holes && Array.isArray(mapData.holes)) {
-            return mapData;
+
+    
+    loadHole(holeIndex) {
+        if (holeIndex < 0 || holeIndex >= this.holes.length) {
+            console.error('Invalid hole index:', holeIndex);
+            return;
         }
         
-        // Convert old format to new format
-        const normalized = {
-            name: mapData.name || 'Untitled Map',
-            holes: [{
-                number: 1,
-                par: 3,
-                startPoint: mapData.startPoint || { x: 0, y: 2, z: 30 },
-                hole: mapData.hole || { x: 0, y: 0, z: -30, radius: 1.2 },
-                walls: mapData.walls || [],
-                ramps: mapData.ramps || [],
-                fans: mapData.fans || [],
-                bouncePads: mapData.bouncePads || [],
-                bumpers: mapData.bumpers || [],
-                speedBoosts: mapData.speedBoosts || [],
-                powerupSpawns: mapData.powerupSpawns || []
-            }],
-            settings: mapData.settings || {
-                skyColor: 0x87CEEB,
-                groundColor: 0x228B22,
-                gravity: -30
-            }
-        };
+        const hole = this.holes[holeIndex];
+        console.log(`⛳ Loading Hole ${hole.number} (Par ${hole.par})`);
         
-        return normalized;
+        // Create walls from hole
+        if (hole.walls) {
+            hole.walls.forEach(wall => {
+                this.physicsManager.createWall(wall.position, wall.size, wall.rotationY || 0, wall.color);
+            });
+        }
+        
+        // Create ramps from hole
+        if (hole.ramps) {
+            hole.ramps.forEach(ramp => {
+                this.physicsManager.createRamp(ramp.position, ramp.size, ramp.rotationY, ramp.angle, ramp.color);
+            });
+        }
+        
+        // Create fans from hole
+        if (hole.fans) {
+            hole.fans.forEach(fan => {
+                this.createFan(fan.position, fan.rotationY || 0, fan.angle || 0, fan.strength || 10);
+            });
+        }
+        
+        // Create bounce pads from hole
+        if (hole.bouncePads) {
+            hole.bouncePads.forEach(pad => {
+                this.createBouncePad(pad.position, pad.rotationY || 0, pad.strength || 20);
+            });
+        }
+        
+        // Create bumpers from hole
+        if (hole.bumpers) {
+            hole.bumpers.forEach(bumper => {
+                this.createBumper(bumper.position, bumper.rotationY || 0, bumper.strength || 15);
+            });
+        }
+        
+        // Create speed boosts from hole
+        if (hole.speedBoosts) {
+            hole.speedBoosts.forEach(boost => {
+                this.createSpeedBoost(boost.position, boost.rotationY || 0, boost.strength || 50);
+            });
+        }
+        
+        // Create hole
+        this.createHole(hole.hole);
+        
+        // Update UI
+        const holeElement = document.getElementById('current-hole');
+        const parElement = document.getElementById('par-value');
+        if (holeElement) holeElement.textContent = hole.number;
+        if (parElement) parElement.textContent = hole.par;
+    }
+    
+    loadDefaultHole() {
+        console.log('🗺️ Using default hole');
+        // Add some obstacles inside
+        this.physicsManager.createWall({ x: 10, y: 1, z: 10 }, { x: 4, y: 2, z: 4 });
+        this.physicsManager.createWall({ x: -15, y: 1, z: -15 }, { x: 3, y: 2, z: 6 });
+        this.physicsManager.createWall({ x: -10, y: 1, z: 15 }, { x: 5, y: 2, z: 2 });
+        
+        // Add ramps
+        this.physicsManager.createRamp({ x: 15, y: 0.3, z: -5 }, { x: 8, y: 0.5, z: 6 }, 90, 20);
+        this.physicsManager.createRamp({ x: -20, y: 0.4, z: 0 }, { x: 10, y: 0.5, z: 8 }, 0, 25);
+        this.physicsManager.createRamp({ x: 0, y: 0.3, z: -20 }, { x: 6, y: 0.5, z: 10 }, 180, 15);
+        this.physicsManager.createRamp({ x: -5, y: 0.5, z: -10 }, { x: 8, y: 0.5, z: 5 }, 270, 30);
+        
+        // Create hole
+        this.createHole({ x: 25, y: 0, z: -25, radius: 1.2 });
+        
+        // Update UI
+        const holeElement = document.getElementById('current-hole');
+        const parElement = document.getElementById('par-value');
+        if (holeElement) holeElement.textContent = 1;
+        if (parElement) parElement.textContent = 3;
     }
     
     initGame(players, localPlayerId, socket, audioManager, mapData = null) {
@@ -106,9 +157,9 @@ export class SceneManager {
         this.totalPlayers = players.length;
         this.localPlayerId = localPlayerId;
         
-        // Normalize map data to multi-hole format
-        this.mapData = this.normalizeMapData(mapData);
-        this.holes = this.mapData ? this.mapData.holes : [];
+        // Set map data (expecting new multi-hole format)
+        this.mapData = mapData;
+        this.holes = mapData?.holes || [];
         this.currentHoleIndex = 0;
         
         // Initialize player scores
@@ -121,9 +172,8 @@ export class SceneManager {
         });
         
         console.log('🎮 Initializing game with', players.length, 'players');
-        console.log('🗺️ mapData received:', mapData);
-        console.log('🗺️ Normalized map data:', this.mapData);
-        console.log(`⛳ Loading ${this.holes.length} hole(s)`);
+        console.log('🗺️ Map:', this.mapData?.name || 'Default');
+        console.log(`⛳ Course has ${this.holes.length} hole(s)`);
         const container = document.getElementById('game-canvas');
         
         if (!container) {
@@ -260,86 +310,22 @@ export class SceneManager {
             { x: wallThickness, y: wallHeight, z: playAreaSize }
         );
         
-        // Load map objects - either from mapData or use defaults
-        console.log('🗺️ Checking mapData:', this.mapData);
-        console.log('🗺️ typeof mapData:', typeof this.mapData);
-        console.log('🗺️ Boolean check:', !!this.mapData);
-        if (this.mapData) {
-            console.log(`🗺️ Loading custom map: ${this.mapData.name}`);
-            
-            // Create walls from map
-            if (this.mapData.walls) {
-                this.mapData.walls.forEach(wall => {
-                    this.physicsManager.createWall(wall.position, wall.size, wall.rotationY || 0, wall.color);
-                });
-            }
-            
-            // Create ramps from map
-            if (this.mapData.ramps) {
-                this.mapData.ramps.forEach(ramp => {
-                    this.physicsManager.createRamp(ramp.position, ramp.size, ramp.rotationY, ramp.angle, ramp.color);
-                });
-            }
-            
-            // Create fans from map
-            if (this.mapData.fans) {
-                this.mapData.fans.forEach(fan => {
-                    this.createFan(fan.position, fan.rotationY || 0, fan.angle || 0, fan.strength || 10);
-                });
-            }
-            
-            // Create bounce pads from map
-            if (this.mapData.bouncePads) {
-                this.mapData.bouncePads.forEach(pad => {
-                    this.createBouncePad(pad.position, pad.rotationY || 0, pad.strength || 20);
-                });
-            }
-            
-            // Create bumpers from map
-            if (this.mapData.bumpers) {
-                this.mapData.bumpers.forEach(bumper => {
-                    this.createBumper(bumper.position, bumper.rotationY || 0, bumper.strength || 15);
-                });
-            }
-            
-            // Create speed boosts from map
-            if (this.mapData.speedBoosts) {
-                this.mapData.speedBoosts.forEach(boost => {
-                    this.createSpeedBoost(boost.position, boost.rotationY || 0, boost.strength || 50);
-                });
-            }
-            
-            // Create hole from map
-            this.createHole(this.mapData.hole);
-            
-            // Apply map settings
-            if (this.mapData.settings) {
-                this.applyMapSettings(this.mapData.settings);
-            }
+        // Load the first hole
+        if (this.holes.length > 0) {
+            this.loadHole(this.currentHoleIndex);
         } else {
-            console.log('🗺️ Using default map');
-            // Add some obstacles inside
-            this.physicsManager.createWall({ x: 10, y: 1, z: 10 }, { x: 4, y: 2, z: 4 }); // Box obstacle
-            this.physicsManager.createWall({ x: -15, y: 1, z: -15 }, { x: 3, y: 2, z: 6 }); // Another obstacle
-            this.physicsManager.createWall({ x: -10, y: 1, z: 15 }, { x: 5, y: 2, z: 2 }); // Long obstacle
-            
-            // Add ramps for testing gravity powerups
-            console.log('🛝 Creating ramps');
-            this.physicsManager.createRamp({ x: 15, y: 0.3, z: -5 }, { x: 8, y: 0.5, z: 6 }, 90, 20); // Ramp facing east
-            this.physicsManager.createRamp({ x: -20, y: 0.4, z: 0 }, { x: 10, y: 0.5, z: 8 }, 0, 25); // Steeper ramp facing north
-            this.physicsManager.createRamp({ x: 0, y: 0.3, z: -20 }, { x: 6, y: 0.5, z: 10 }, 180, 15); // Gentle ramp facing south
-            this.physicsManager.createRamp({ x: -5, y: 0.5, z: -10 }, { x: 8, y: 0.5, z: 5 }, 270, 30); // Steep ramp facing west
-            
-            // Create hole with flag
-            console.log('⛳ Creating hole and flag');
-            this.createHole({ x: 25, y: 0, z: -25 });
+            console.log('🗺️ No holes in map, using default');
+            this.loadDefaultHole();
         }
         
         this.applyMapSettings();
         
+        // Get current hole data for ball placement and powerups
+        const currentHole = this.holes[this.currentHoleIndex];
+        
         // Create balls for all players
         console.log('⚽ Creating player balls');
-        const startPoint = this.mapData?.startPoint || { x: 0, y: 3, z: 30 };
+        const startPoint = currentHole?.startPoint || { x: 0, y: 3, z: 30 };
         players.forEach((player, index) => {
             // Position players at start point with slight offset for multiple players
             const position = {
@@ -386,7 +372,7 @@ export class SceneManager {
         
         // Spawn powerups
         console.log('💎 Spawning powerups');
-        const powerupPositions = this.mapData?.powerupSpawns?.map(spawn => spawn.position) || null;
+        const powerupPositions = currentHole?.powerupSpawns?.map(spawn => spawn.position) || null;
         this.powerupManager.spawnPowerups(powerupPositions);
         
         // Start animation loop
