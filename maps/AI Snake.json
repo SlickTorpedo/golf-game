@@ -1,0 +1,124 @@
+{
+  "name": "AI Generated - Snake Path",
+  "levels": [
+    {
+      "number": 1,
+      "name": "The Serpent",
+      "par": 4,
+      "startPoint": {
+        "x": 0,
+        "y": 0,
+        "z": 35
+      },
+      "hole": {
+        "x": 0,
+        "y": 0,
+        "z": -35,
+        "radius": 1.2
+      },
+      "walls": [
+        {
+          "position": { "x": -25, "y": 1, "z": 0 },
+          "size": { "x": 2, "y": 2, "z": 72 },
+          "rotationY": 0,
+          "color": 9127187
+        },
+        {
+          "position": { "x": 25, "y": 1, "z": 0 },
+          "size": { "x": 2, "y": 2, "z": 72 },
+          "rotationY": 0,
+          "color": 9127187
+        },
+        {
+          "position": { "x": 0, "y": 1, "z": -36 },
+          "size": { "x": 52, "y": 2, "z": 2 },
+          "rotationY": 0,
+          "color": 9127187
+        },
+        {
+          "position": { "x": 0, "y": 1, "z": 36 },
+          "size": { "x": 52, "y": 2, "z": 2 },
+          "rotationY": 0,
+          "color": 9127187
+        },
+        {
+          "position": { "x": -10, "y": 1, "z": 20 },
+          "size": { "x": 3, "y": 2, "z": 25 },
+          "rotationY": 0,
+          "color": 9127187
+        },
+        {
+          "position": { "x": 10, "y": 1, "z": 0 },
+          "size": { "x": 3, "y": 2, "z": 30 },
+          "rotationY": 0,
+          "color": 9127187
+        },
+        {
+          "position": { "x": -10, "y": 1, "z": -20 },
+          "size": { "x": 3, "y": 2, "z": 25 },
+          "rotationY": 0,
+          "color": 9127187
+        }
+      ],
+      "ramps": [],
+      "powerupSpawns": [
+        {
+          "position": { "x": -5, "y": 1, "z": 25 },
+          "color": 16711935
+        },
+        {
+          "position": { "x": 5, "y": 1, "z": 10 },
+          "color": 16711935
+        },
+        {
+          "position": { "x": -5, "y": 1, "z": -5 },
+          "color": 16711935
+        },
+        {
+          "position": { "x": 5, "y": 1, "z": -20 },
+          "color": 16711935
+        },
+        {
+          "position": { "x": 0, "y": 1, "z": -30 },
+          "color": 16711935
+        }
+      ],
+      "fans": [
+        {
+          "position": { "x": 15, "y": 0, "z": 15 },
+          "rotationY": 270,
+          "angle": 0,
+          "strength": 12
+        },
+        {
+          "position": { "x": -15, "y": 0, "z": -10 },
+          "rotationY": 90,
+          "angle": 0,
+          "strength": 12
+        }
+      ],
+      "bouncePads": [],
+      "bumpers": [
+        {
+          "position": { "x": 0, "y": 0, "z": 15 },
+          "rotationY": 0,
+          "strength": 15
+        },
+        {
+          "position": { "x": 0, "y": 0, "z": -10 },
+          "rotationY": 0,
+          "strength": 15
+        }
+      ],
+      "speedBoosts": [],
+      "lava": [],
+      "spinners": []
+    }
+  ],
+  "settings": {
+    "skyColor": 8900331,
+    "groundColor": 2263842,
+    "gravity": -30,
+    "levelSize": 80
+  }
+}

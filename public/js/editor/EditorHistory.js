@@ -86,7 +86,6 @@ export class EditorHistory {
             const obj = this.editor.objects.createWall(wall.position, wall.size, wall.rotationY || 0, wall.color);
             this.editor.scene.scene.add(obj);
             this.editor.scene.objects.push(obj);
-            this.editor.state.mapData.walls.push(wall);
         });
         
         this.editor.state.mapData.ramps.forEach(ramp => {

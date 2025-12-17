@@ -5,6 +5,49 @@ export class EditorFileIO {
         this.editor = editor;
     }
     
+    // Deduplicate arrays in map data to prevent duplicate objects
+    deduplicateMapData(mapData) {
+        const deduplicateArray = (array) => {
+            if (!array || !Array.isArray(array)) return [];
+            
+            const uniqueItems = [];
+            const seen = new Set();
+            
+            for (const item of array) {
+                const key = JSON.stringify(item);
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueItems.push(item);
+                }
+            }
+            
+            return uniqueItems;
+        };
+        
+        // Helper to deduplicate a single level/hole
+        const processLevel = (level) => {
+            if (level.walls) level.walls = deduplicateArray(level.walls);
+            if (level.ramps) level.ramps = deduplicateArray(level.ramps);
+            if (level.powerupSpawns) level.powerupSpawns = deduplicateArray(level.powerupSpawns);
+            if (level.fans) level.fans = deduplicateArray(level.fans);
+            if (level.bouncePads) level.bouncePads = deduplicateArray(level.bouncePads);
+            if (level.bumpers) level.bumpers = deduplicateArray(level.bumpers);
+        };
+        
+        // Deduplicate single-level maps
+        processLevel(mapData);
+        
+        // Handle multi-level maps with "levels" array
+        if (mapData.levels && Array.isArray(mapData.levels)) {
+            mapData.levels.forEach(level => processLevel(level));
+        }
+        
+        // Handle multi-level maps with "holes" array
+        if (mapData.holes && Array.isArray(mapData.holes)) {
+            mapData.holes.forEach(hole => processLevel(hole));
+        }
+    }
+    
     showSaveModal() {
         document.getElementById('save-modal').classList.remove('hidden');
         document.getElementById('map-name').value = this.editor.state.mapData.name;
@@ -24,6 +67,9 @@ export class EditorFileIO {
             this.editor.multiLevelManager.getMapData() : 
             this.editor.state.mapData;
         saveData.name = mapName;
+        
+        // Deduplicate all arrays before saving
+        this.deduplicateMapData(saveData);
         
         try {
             const response = await fetch('/api/save-map', {

@@ -1,0 +1,118 @@
+{
+  "name": "Christmas Holly-Day Links",
+  "levels": [
+    {
+      "number": 1,
+      "name": "Candy Cane Lane",
+      "par": 3,
+      "startPoint": { "x": 0, "y": 0, "z": 35 },
+      "hole": { "x": 0, "y": 0, "z": -35, "radius": 1.2 },
+      "walls": [
+        { "position": { "x": 0, "y": 0, "z": 50 }, "size": { "x": 50, "y": 5, "z": 1 }, "color": 15790320 },
+        { "position": { "x": 0, "y": 0, "z": -50 }, "size": { "x": 50, "y": 5, "z": 1 }, "color": 15790320 },
+        { "position": { "x": 25, "y": 0, "z": 0 }, "size": { "x": 1, "y": 5, "z": 101 }, "color": 15790320 },
+        { "position": { "x": -25, "y": 0, "z": 0 }, "size": { "x": 1, "y": 5, "z": 101 }, "color": 15790320 },
+        { "position": { "x": 10, "y": 0, "z": 20 }, "size": { "x": 2, "y": 3, "z": 10 }, "color": 13893632 },
+        { "position": { "x": 10, "y": 0, "z": 10 }, "size": { "x": 2, "y": 3, "z": 10 }, "color": 16777215 },
+        { "position": { "x": 10, "y": 0, "z": 0 }, "size": { "x": 2, "y": 3, "z": 10 }, "color": 13893632 },
+        { "position": { "x": 10, "y": 0, "z": -10 }, "size": { "x": 2, "y": 3, "z": 10 }, "color": 16777215 },
+        { "position": { "x": -10, "y": 0, "z": 20 }, "size": { "x": 2, "y": 3, "z": 10 }, "color": 13893632 },
+        { "position": { "x": -10, "y": 0, "z": 10 }, "size": { "x": 2, "y": 3, "z": 10 }, "color": 16777215 },
+        { "position": { "x": -10, "y": 0, "z": 0 }, "size": { "x": 2, "y": 3, "z": 10 }, "color": 13893632 },
+        { "position": { "x": -10, "y": 0, "z": -10 }, "size": { "x": 2, "y": 3, "z": 10 }, "color": 16777215 }
+      ],
+      "ramps": [],
+      "powerupSpawns": [
+        { "position": { "x": 0, "y": 1, "z": 15 }, "type": "random" },
+        { "position": { "x": 0, "y": 1, "z": 0 }, "type": "random" },
+        { "position": { "x": 0, "y": 1, "z": -15 }, "type": "random" }
+      ],
+      "fans": [],
+      "bouncePads": [],
+      "bumpers": [
+        { "position": { "x": 0, "y": 0, "z": 5 }, "radius": 1.5, "height": 2, "color": 16766720 },
+        { "position": { "x": 0, "y": 0, "z": -5 }, "radius": 1.5, "height": 2, "color": 13893632 }
+      ],
+      "speedBoosts": [],
+      "lava": [],
+      "spinners": []
+    },
+    {
+      "number": 2,
+      "name": "The Snowy Slopes",
+      "par": 4,
+      "startPoint": { "x": 0, "y": 5, "z": 40 },
+      "hole": { "x": 0, "y": 0, "z": -40, "radius": 1.2 },
+      "walls": [
+        { "position": { "x": 0, "y": 0, "z": 60 }, "size": { "x": 60, "y": 15, "z": 1 }, "color": 15790320 },
+        { "position": { "x": 0, "y": 0, "z": -60 }, "size": { "x": 60, "y": 15, "z": 1 }, "color": 15790320 },
+        { "position": { "x": 30, "y": 0, "z": 0 }, "size": { "x": 1, "y": 15, "z": 121 }, "color": 15790320 },
+        { "position": { "x": -30, "y": 0, "z": 0 }, "size": { "x": 1, "y": 15, "z": 121 }, "color": 15790320 },
+        { "position": { "x": 15, "y": 0, "z": -10 }, "size": { "x": 5, "y": 3, "z": 20 }, "color": 14745599 },
+        { "position": { "x": -15, "y": 0, "z": -30 }, "size": { "x": 5, "y": 3, "z": 20 }, "color": 14745599 }
+      ],
+      "ramps": [
+        { "position": { "x": 0, "y": 0, "z": 20 }, "size": { "x": 20, "y": 5, "z": 40 }, "color": 16448250, "slopeDir": "z_fwd" }
+      ],
+      "powerupSpawns": [
+        { "position": { "x": 0, "y": 4, "z": 30 }, "type": "random" },
+        { "position": { "x": 10, "y": 1, "z": -10 }, "type": "random" },
+        { "position": { "x": -10, "y": 1, "z": -20 }, "type": "random" }
+      ],
+      "fans": [],
+      "bouncePads": [],
+      "bumpers": [],
+      "speedBoosts": [],
+      "lava": [],
+      "spinners": [
+        { "position": { "x": 0, "y": 0, "z": -10 }, "size": { "x": 8, "y": 1, "z": 8 }, "color": 13563903, "speed": 5 },
+        { "position": { "x": 10, "y": 0, "z": -25 }, "size": { "x": 6, "y": 1, "z": 6 }, "color": 13563903, "speed": -5 },
+        { "position": { "x": -10, "y": 0, "z": -5 }, "size": { "x": 6, "y": 1, "z": 6 }, "color": 13563903, "speed": 7 }
+      ]
+    },
+    {
+      "number": 3,
+      "name": "Under the Christmas Tree",
+      "par": 5,
+      "startPoint": { "x": 20, "y": 0, "z": 35 },
+      "hole": { "x": -20, "y": 0, "z": -35, "radius": 1.2 },
+      "walls": [
+        { "position": { "x": 0, "y": 0, "z": 45 }, "size": { "x": 60, "y": 5, "z": 1 }, "color": 2263842 },
+        { "position": { "x": 0, "y": 0, "z": -45 }, "size": { "x": 60, "y": 5, "z": 1 }, "color": 2263842 },
+        { "position": { "x": 30, "y": 0, "z": 0 }, "size": { "x": 1, "y": 5, "z": 91 }, "color": 2263842 },
+        { "position": { "x": -30, "y": 0, "z": 0 }, "size": { "x": 1, "y": 5, "z": 91 }, "color": 2263842 },
+        { "position": { "x": 5, "y": 0, "z": 25 }, "size": { "x": 10, "y": 6, "z": 10 }, "color": 13893632 },
+        { "position": { "x": -15, "y": 0, "z": 15 }, "size": { "x": 8, "y": 4, "z": 8 }, "color": 3407667 },
+        { "position": { "x": 15, "y": 0, "z": 0 }, "size": { "x": 12, "y": 7, "z": 12 }, "color": 16766720 },
+        { "position": { "x": -5, "y": 0, "z": -15 }, "size": { "x": 10, "y": 5, "z": 10 }, "color": 13893632 },
+        { "position": { "x": 20, "y": 0, "z": -25 }, "size": { "x": 8, "y": 4, "z": 8 }, "color": 3407667 },
+        { "position": { "x": 0, "y": 0, "z": 0 }, "size": { "x": 4, "y": 15, "z": 4 }, "color": 6127157 }
+      ],
+      "ramps": [],
+      "powerupSpawns": [
+        { "position": { "x": 20, "y": 1, "z": 20 }, "type": "random" },
+        { "position": { "x": -20, "y": 1, "z": 0 }, "type": "random" },
+        { "position": { "x": 0, "y": 1, "z": -30 }, "type": "random" },
+        { "position": { "x": 25, "y": 1, "z": -10 }, "type": "random" }
+      ],
+      "fans": [],
+      "bouncePads": [],
+      "bumpers": [
+        { "position": { "x": 15, "y": 0, "z": 25 }, "radius": 2, "height": 3, "color": 16711680 },
+        { "position": { "x": -5, "y": 0, "z": 25 }, "radius": 2, "height": 3, "color": 16766720 },
+        { "position": { "x": 25, "y": 0, "z": 10 }, "radius": 2, "height": 3, "color": 16711680 },
+        { "position": { "x": -25, "y": 0, "z": -5 }, "radius": 2, "height": 3, "color": 16766720 },
+        { "position": { "x": 0, "y": 0, "z": -25 }, "radius": 2.5, "height": 3, "color": 16711680 }
+      ],
+      "speedBoosts": [],
+      "lava": [],
+      "spinners": []
+    }
+  ],
+  "settings": {
+    "skyColor": 1315860,
+    "groundColor": 15790320,
+    "gravity": -30,
+    "levelSize": 100
+  }
+}
