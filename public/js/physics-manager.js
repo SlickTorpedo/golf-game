@@ -807,7 +807,42 @@ export class PhysicsManager {
         return body;
     }
     
+    createSpinner(position, length = 8, speed = 1) {
+        // Create rotating box body for spinner blade
+        const shape = new CANNON.Box(new CANNON.Vec3(length / 2, 0.2, 0.5));
+        const body = new CANNON.Body({
+            mass: 0, // Static/kinematic
+            position: new CANNON.Vec3(position.x, position.y + 0.5, position.z),
+            type: CANNON.Body.KINEMATIC // Kinematic bodies move but aren't affected by forces
+        });
+        body.addShape(shape);
+        
+        // Store spinner data
+        body.isSpinner = true;
+        body.spinnerLength = length;
+        body.spinnerSpeed = speed * 0.02; // Radians per frame
+        body.spinnerAngle = 0;
+        
+        this.world.addBody(body);
+        
+        // Store for rotation update
+        if (!this.spinnerBodies) this.spinnerBodies = [];
+        this.spinnerBodies.push(body);
+        
+        console.log('🌀 Spinner physics body created at:', position, 'length:', length, 'speed:', speed);
+        return body;
+    }
+    
     update(deltaTime) {
+        // Update spinner rotations
+        if (this.spinnerBodies) {
+            this.spinnerBodies.forEach(body => {
+                // Rotate the spinner body
+                body.spinnerAngle += body.spinnerSpeed;
+                body.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), body.spinnerAngle);
+            });
+        }
+        
         // Apply fan forces to balls
         if (this.sceneManager && this.sceneManager.fans) {
             this.meshToBody.forEach((body, mesh) => {

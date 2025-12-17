@@ -28,7 +28,8 @@ export class MultiLevelManager {
             bouncePads: [],
             bumpers: [],
             speedBoosts: [],
-            lava: []
+            lava: [],
+            spinners: []
         };
     }
     
@@ -200,6 +201,7 @@ export class MultiLevelManager {
         level.bumpers = JSON.parse(JSON.stringify(this.editor.state.mapData.bumpers || []));
         level.speedBoosts = JSON.parse(JSON.stringify(this.editor.state.mapData.speedBoosts || []));
         level.lava = JSON.parse(JSON.stringify(this.editor.state.mapData.lava || []));
+        level.spinners = JSON.parse(JSON.stringify(this.editor.state.mapData.spinners || []));
     }
     
     loadLevel(index) {
@@ -221,6 +223,7 @@ export class MultiLevelManager {
         this.editor.state.mapData.bumpers = [];
         this.editor.state.mapData.speedBoosts = [];
         this.editor.state.mapData.lava = [];
+        this.editor.state.mapData.spinners = [];
         
         // Recreate objects
         this.editor.objects.createStartPoint();
@@ -289,6 +292,15 @@ export class MultiLevelManager {
                 this.editor.scene.scene.add(obj);
                 this.editor.scene.objects.push(obj);
                 this.editor.state.mapData.lava.push(obj.userData.data);
+            });
+        }
+        
+        if (level.spinners) {
+            level.spinners.forEach(spinner => {
+                const obj = this.editor.objects.createSpinner(spinner.position, spinner.rotationY || 0, spinner.length || 8, spinner.speed || 1);
+                this.editor.scene.scene.add(obj);
+                this.editor.scene.objects.push(obj);
+                this.editor.state.mapData.spinners.push(obj.userData.data);
             });
         }
         

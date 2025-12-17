@@ -125,6 +125,13 @@ export class SceneManager {
             });
         }
         
+        // Create spinners from hole
+        if (hole.spinners) {
+            hole.spinners.forEach(spinner => {
+                this.createSpinner(spinner.position, spinner.rotationY || 0, spinner.length || 8, spinner.speed || 1);
+            });
+        }
+        
         // Create hole
         this.createHole(hole.hole);
         
@@ -1042,6 +1049,80 @@ export class SceneManager {
         return lavaGroup;
     }
     
+    createSpinner(position, rotationY = 0, length = 8, speed = 1) {
+        const spinnerGroup = new THREE.Group();
+        
+        // Main blade
+        const bladeGeometry = new THREE.BoxGeometry(length, 0.4, 1);
+        const bladeMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x333333,
+            roughness: 0.6,
+            metalness: 0.4
+        });
+        const blade = new THREE.Mesh(bladeGeometry, bladeMaterial);
+        blade.position.y = 0.5; // Height of the blade at ground level
+        spinnerGroup.add(blade);
+        
+        // Central pole/post
+        const poleGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1, 16);
+        const poleMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x555555,
+            roughness: 0.5,
+            metalness: 0.5
+        });
+        const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+        pole.position.y = 0.5;
+        spinnerGroup.add(pole);
+        
+        // Warning stripes on blade ends
+        const stripeMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffff00,
+            emissive: 0xffff00,
+            emissiveIntensity: 0.3
+        });
+        const stripe1 = new THREE.Mesh(
+            new THREE.BoxGeometry(length * 0.15, 0.5, 1.2),
+            stripeMaterial
+        );
+        stripe1.position.x = -length / 2 + (length * 0.075);
+        stripe1.position.y = 0.5;
+        spinnerGroup.add(stripe1);
+        
+        const stripe2 = new THREE.Mesh(
+            new THREE.BoxGeometry(length * 0.15, 0.5, 1.2),
+            stripeMaterial
+        );
+        stripe2.position.x = length / 2 - (length * 0.075);
+        stripe2.position.y = 0.5;
+        spinnerGroup.add(stripe2);
+        
+        spinnerGroup.position.set(position.x, position.y, position.z);
+        spinnerGroup.rotation.y = (rotationY * Math.PI) / 180;
+        spinnerGroup.userData.type = 'spinner';
+        spinnerGroup.userData.blade = blade;
+        spinnerGroup.userData.rotationSpeed = speed * 0.02; // Convert to radians per frame
+        
+        this.scene.add(spinnerGroup);
+        
+        // Store for animation and physics
+        if (!this.spinners) this.spinners = [];
+        this.spinners.push({
+            group: spinnerGroup,
+            blade: blade,
+            position: position,
+            length: length,
+            speed: speed,
+            currentAngle: 0
+        });
+        
+        // Add physics body for collision
+        this.physicsManager.createSpinner(position, length, speed);
+        
+        console.log('🌀 Spinner created at:', position, 'length:', length, 'speed:', speed);
+        
+        return spinnerGroup;
+    }
+    
     createSpeedBoost(position, rotationY = 0, strength = 50) {
         const boostGroup = new THREE.Group();
         
@@ -1340,11 +1421,6 @@ export class SceneManager {
         const dz = ballPos.z - holePos.z;
         const distance2D = Math.sqrt(dx * dx + dz * dz);
         
-        // Debug logging when ball is near hole
-        if (distance2D < 10) {
-            console.log(`🎯 Ball at (${ballPos.x.toFixed(1)}, ${ballPos.y.toFixed(1)}, ${ballPos.z.toFixed(1)}), Hole at (${holePos.x}, ${holePos.y}, ${holePos.z}), Distance: ${distance2D.toFixed(2)}`);
-        }
-        
         // Check if ball is in hole and has settled at the bottom
         if (distance2D < this.hole.radius * 0.8 && ballPos.y <= this.hole.bottomY + 0.6) {
             const ballBody = this.physicsManager.meshToBody.get(this.localBall);
@@ -1616,6 +1692,7 @@ export class SceneManager {
                 child.userData.type === 'bumper' ||
                 child.userData.type === 'speedBoost' ||
                 child.userData.type === 'lava' ||
+                child.userData.type === 'spinner' ||
                 child.userData.type === 'hole-visual' // Remove hole visuals too!
             )) {
                 objectsToRemove.push(child);
@@ -1640,6 +1717,7 @@ export class SceneManager {
         this.speedBoosts = [];
         this.fans = [];
         this.lavaObjects = [];
+        this.spinners = [];
         
         console.log(`🧹 Cleared ${objectsToRemove.length} map objects from scene`);
     }
@@ -1943,6 +2021,14 @@ export class SceneManager {
                         bubble.mesh.position.y = bubble.baseY + Math.sin(time * bubble.speed) * 0.15;
                     });
                 }
+            });
+        }
+        
+        // Animate spinners
+        if (this.spinners) {
+            this.spinners.forEach(spinner => {
+                spinner.currentAngle += spinner.group.userData.rotationSpeed;
+                spinner.group.rotation.y = spinner.currentAngle;
             });
         }
         

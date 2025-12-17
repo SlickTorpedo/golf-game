@@ -403,12 +403,10 @@ export class ShotMechanics {
         
         // Update visible arrows with animation
         this.powerArrows.forEach((arrow, i) => {
-            if (arrow.visible) {
-                // Update bobbing position
+            if (arrow.visible && this.localBall) {
+                // Update bobbing position - use ball's Y position as base
                 const bobOffset = Math.sin(this.arrowAnimationTime + i * 0.5) * 0.1;
-                // Get the base position (stored direction would be needed, so recalculate from current position)
-                const currentY = arrow.position.y;
-                const baseY = 0.15;
+                const baseY = this.localBall.position.y; // Use ball's center height
                 arrow.position.y = baseY + bobOffset;
                 
                 // Update pulsing opacity

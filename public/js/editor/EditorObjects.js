@@ -311,6 +311,35 @@ export class EditorObjects {
         return lavaGroup;
     }
     
+    createSpinner(position, rotationY = 0, length = 8, speed = 1) {
+        const spinnerGroup = new THREE.Group();
+        
+        // Main blade
+        const bladeGeometry = new THREE.BoxGeometry(length, 0.4, 1);
+        const bladeMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+        const blade = new THREE.Mesh(bladeGeometry, bladeMaterial);
+        blade.position.y = 0.5;
+        spinnerGroup.add(blade);
+        
+        // Central pole
+        const poleGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1, 16);
+        const poleMaterial = new THREE.MeshLambertMaterial({ color: 0x555555 });
+        const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+        pole.position.y = 0.5;
+        spinnerGroup.add(pole);
+        
+        spinnerGroup.position.set(position.x, position.y, position.z);
+        spinnerGroup.rotation.y = (rotationY * Math.PI) / 180;
+        
+        const spinnerData = { position, rotationY, length, speed };
+        spinnerGroup.userData = { 
+            type: 'spinner',
+            data: spinnerData
+        };
+        
+        return spinnerGroup;
+    }
+    
     createSpeedBoost(position, rotationY = 0, strength = 50) {
         const boostGroup = new THREE.Group();
         

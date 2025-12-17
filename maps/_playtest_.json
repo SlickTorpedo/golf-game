@@ -16,7 +16,36 @@
         "z": -30,
         "radius": 1.2
       },
-      "walls": [],
+      "walls": [
+        {
+          "position": {
+            "x": -0.5120748382051072,
+            "y": -0.13578267309493697,
+            "z": 6.386369402852706
+          },
+          "size": {
+            "x": 10.269103079330446,
+            "y": 1.728434653810126,
+            "z": 15.227261194294588
+          },
+          "rotationY": 0,
+          "color": 9127187
+        },
+        {
+          "position": {
+            "x": -0.5120748382051072,
+            "y": -0.13578267309493697,
+            "z": 6.386369402852706
+          },
+          "size": {
+            "x": 10.269103079330446,
+            "y": 1.728434653810126,
+            "z": 15.227261194294588
+          },
+          "rotationY": 0,
+          "color": 9127187
+        }
+      ],
       "ramps": [],
       "powerupSpawns": [],
       "fans": [],
@@ -99,6 +128,98 @@
           "rotationY": 0,
           "width": 5,
           "depth": 5
+        }
+      ],
+      "spinners": [
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": -9
+          },
+          "rotationY": 0,
+          "length": 8,
+          "speed": 1
+        },
+        {
+          "position": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "rotationY": 0,
+          "length": 8,
+          "speed": 1
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 2
+          },
+          "rotationY": 0,
+          "length": 8,
+          "speed": 1
+        },
+        {
+          "position": {
+            "x": -1,
+            "y": 0,
+            "z": 4
+          },
+          "rotationY": 0,
+          "length": 8,
+          "speed": 1
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 6
+          },
+          "rotationY": 0,
+          "length": 8,
+          "speed": 1
+        },
+        {
+          "position": {
+            "x": -1,
+            "y": 0,
+            "z": 8
+          },
+          "rotationY": 0,
+          "length": 8,
+          "speed": 1
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 10
+          },
+          "rotationY": 0,
+          "length": 8,
+          "speed": 1
+        },
+        {
+          "position": {
+            "x": -1,
+            "y": 0,
+            "z": 12
+          },
+          "rotationY": 0,
+          "length": 8,
+          "speed": 1
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": -12
+          },
+          "rotationY": 0,
+          "length": 8,
+          "speed": 1
         }
       ]
     }

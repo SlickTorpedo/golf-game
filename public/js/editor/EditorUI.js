@@ -134,6 +134,23 @@ export class EditorUI {
             </div>`;
         }
         
+        if (type === 'spinner') {
+            html += `<div class="property-group">
+                <label>Rotation Y (degrees)</label>
+                <input type="number" id="prop-rotation" value="${data.rotationY || 0}" step="15" min="0" max="360">
+            </div>`;
+            
+            html += `<div class="property-group">
+                <label>Blade Length</label>
+                <input type="number" id="prop-length" value="${data.length || 8}" step="0.5" min="2" max="15">
+            </div>`;
+            
+            html += `<div class="property-group">
+                <label>Rotation Speed</label>
+                <input type="number" id="prop-speed" value="${data.speed || 1}" step="0.1" min="0.1" max="5">
+            </div>`;
+        }
+        
         if (type === 'hole') {
             html += `<div class="property-group">
                 <label>Radius</label>

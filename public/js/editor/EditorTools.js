@@ -150,6 +150,18 @@ export class EditorTools {
                 if (!this.editor.state.mapData.lava) this.editor.state.mapData.lava = [];
                 this.editor.state.mapData.lava.push(obj.userData.data);
                 break;
+            case 'spinner':
+                obj = this.editor.objects.createSpinner(
+                    position,
+                    this.previewRotation,
+                    8,
+                    1
+                );
+                this.editor.scene.scene.add(obj);
+                this.editor.scene.objects.push(obj);
+                if (!this.editor.state.mapData.spinners) this.editor.state.mapData.spinners = [];
+                this.editor.state.mapData.spinners.push(obj.userData.data);
+                break;
             case 'start':
                 const startObj = this.editor.scene.objects.find(o => o.userData.type === 'start');
                 if (startObj) {
@@ -248,6 +260,16 @@ export class EditorTools {
                 lavaPlane.position.y = 0.1;
                 lavaGroup.add(lavaPlane);
                 mesh = lavaGroup;
+                break;
+            case 'spinner':
+                const spinnerGroup = new THREE.Group();
+                const spinnerGeom = new THREE.BoxGeometry(8, 0.4, 1);
+                const spinnerMat = transparentMaterial.clone();
+                spinnerMat.color = new THREE.Color(0x333333);
+                const spinnerBlade = new THREE.Mesh(spinnerGeom, spinnerMat);
+                spinnerBlade.position.y = 0.5;
+                spinnerGroup.add(spinnerBlade);
+                mesh = spinnerGroup;
                 break;
             case 'start':
                 geometry = new THREE.SphereGeometry(0.5, 16, 16);
