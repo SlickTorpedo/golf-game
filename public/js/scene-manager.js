@@ -188,11 +188,11 @@ export class SceneManager {
             return;
         }
         
-        // Scene with realistic sky
+        // Scene with space background
         console.log('🎨 Creating Three.js scene');
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x87CEEB);
-        this.scene.fog = new THREE.Fog(0x87CEEB, 80, 250);
+        this.scene.background = new THREE.Color(0x0a0e27); // Deep space blue
+        this.scene.fog = new THREE.Fog(0x0a0e27, 80, 250);
         
         // Physics
         console.log('⚙️ Creating physics manager');
@@ -270,6 +270,10 @@ export class SceneManager {
         const backLight = new THREE.DirectionalLight(0xffffff, 0.8);
         backLight.position.set(0, 20, -30);
         this.scene.add(backLight);
+        
+        // Create space environment with stars, asteroids, and characters
+        console.log('🌌 Creating space environment');
+        this.createSpaceEnvironment();
         
         // Ground - plane with checkered pattern
         console.log('🌱 Creating ground plane');
@@ -443,6 +447,202 @@ export class SceneManager {
         this.playerBalls.set(playerId, ball);
         
         return ball;
+    }
+    
+    createSpaceEnvironment() {
+        this.spaceObjects = [];
+        
+        // Create starfield - lots of twinkling stars
+        const starGeometry = new THREE.BufferGeometry();
+        const starCount = 500;
+        const starPositions = new Float32Array(starCount * 3);
+        const starSizes = new Float32Array(starCount);
+        
+        for (let i = 0; i < starCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const height = (Math.random() - 0.5) * 100 + 30;
+            const distance = 60 + Math.random() * 80;
+            
+            starPositions[i * 3] = Math.cos(angle) * distance;
+            starPositions[i * 3 + 1] = height;
+            starPositions[i * 3 + 2] = Math.sin(angle) * distance;
+            starSizes[i] = Math.random() * 2 + 0.5;
+        }
+        
+        starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        starGeometry.setAttribute('size', new THREE.BufferAttribute(starSizes, 1));
+        
+        const starMaterial = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 1.5,
+            transparent: true,
+            opacity: 0.8,
+            sizeAttenuation: true
+        });
+        
+        this.stars = new THREE.Points(starGeometry, starMaterial);
+        this.scene.add(this.stars);
+        this.spaceObjects.push({ mesh: this.stars, type: 'stars' });
+        
+        // Create asteroids - various sizes rotating
+        const asteroidCount = 12;
+        for (let i = 0; i < asteroidCount; i++) {
+            const size = Math.random() * 2 + 1;
+            const geometry = new THREE.DodecahedronGeometry(size, 0);
+            const material = new THREE.MeshStandardMaterial({
+                color: 0x8b7355,
+                roughness: 1.0,
+                metalness: 0
+            });
+            const asteroid = new THREE.Mesh(geometry, material);
+            
+            const angle = (i / asteroidCount) * Math.PI * 2;
+            const distance = 70 + Math.random() * 30;
+            const height = (Math.random() - 0.5) * 40 + 25;
+            
+            asteroid.position.set(
+                Math.cos(angle) * distance,
+                height,
+                Math.sin(angle) * distance
+            );
+            
+            asteroid.rotation.set(
+                Math.random() * Math.PI,
+                Math.random() * Math.PI,
+                Math.random() * Math.PI
+            );
+            
+            this.scene.add(asteroid);
+            this.spaceObjects.push({
+                mesh: asteroid,
+                type: 'asteroid',
+                rotationSpeed: {
+                    x: (Math.random() - 0.5) * 0.02,
+                    y: (Math.random() - 0.5) * 0.02,
+                    z: (Math.random() - 0.5) * 0.02
+                }
+            });
+        }
+        
+        // Create fun floating characters
+        const characters = [
+            { emoji: '👽', color: 0x00ff00 },
+            { emoji: '🚀', color: 0xff6b6b },
+            { emoji: '🛸', color: 0x4ecdc4 },
+            { emoji: '🌙', color: 0xffe66d },
+            { emoji: '🪐', color: 0xff9ff3 },
+            { emoji: '👾', color: 0xb388ff },
+            { emoji: '🌟', color: 0xffd700 },
+            { emoji: '☄️', color: 0xff5252 }
+        ];
+        
+        characters.forEach((char, i) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.font = '100px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(char.emoji, 64, 64);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ 
+                map: texture,
+                transparent: true
+            });
+            const sprite = new THREE.Sprite(material);
+            sprite.scale.set(4, 4, 1);
+            
+            const angle = (i / characters.length) * Math.PI * 2;
+            const distance = 65 + Math.random() * 25;
+            const height = (Math.random() - 0.5) * 60 + 30;
+            
+            sprite.position.set(
+                Math.cos(angle) * distance,
+                height,
+                Math.sin(angle) * distance
+            );
+            
+            this.scene.add(sprite);
+            this.spaceObjects.push({
+                mesh: sprite,
+                type: 'character',
+                baseY: height,
+                bobSpeed: 0.5 + Math.random() * 1.5,
+                bobAmount: 2 + Math.random() * 3,
+                rotationSpeed: (Math.random() - 0.5) * 0.01,
+                orbitSpeed: (Math.random() - 0.5) * 0.0003,
+                orbitRadius: distance,
+                orbitAngle: angle
+            });
+        });
+        
+        // Add some colored nebula clouds
+        const cloudCount = 8;
+        for (let i = 0; i < cloudCount; i++) {
+            const geometry = new THREE.SphereGeometry(8 + Math.random() * 5, 16, 16);
+            const colors = [0xff69b4, 0x9370db, 0x00ced1, 0xff6347, 0x7fff00];
+            const material = new THREE.MeshBasicMaterial({
+                color: colors[i % colors.length],
+                transparent: true,
+                opacity: 0.15,
+                side: THREE.BackSide
+            });
+            const cloud = new THREE.Mesh(geometry, material);
+            
+            const angle = (i / cloudCount) * Math.PI * 2;
+            const distance = 80 + Math.random() * 40;
+            const height = (Math.random() - 0.5) * 50 + 20;
+            
+            cloud.position.set(
+                Math.cos(angle) * distance,
+                height,
+                Math.sin(angle) * distance
+            );
+            
+            this.scene.add(cloud);
+            this.spaceObjects.push({
+                mesh: cloud,
+                type: 'nebula',
+                pulseSpeed: 0.5 + Math.random(),
+                basescale: 1
+            });
+        }
+    }
+    
+    updateSpaceEnvironment(deltaTime) {
+        if (!this.spaceObjects) return;
+        
+        const time = Date.now() * 0.001;
+        
+        this.spaceObjects.forEach(obj => {
+            if (obj.type === 'asteroid') {
+                // Rotate asteroids
+                obj.mesh.rotation.x += obj.rotationSpeed.x;
+                obj.mesh.rotation.y += obj.rotationSpeed.y;
+                obj.mesh.rotation.z += obj.rotationSpeed.z;
+            } else if (obj.type === 'character') {
+                // Bob up and down
+                obj.mesh.position.y = obj.baseY + Math.sin(time * obj.bobSpeed) * obj.bobAmount;
+                
+                // Slight rotation
+                obj.mesh.material.rotation += obj.rotationSpeed;
+                
+                // Orbit around the map
+                obj.orbitAngle += obj.orbitSpeed;
+                obj.mesh.position.x = Math.cos(obj.orbitAngle) * obj.orbitRadius;
+                obj.mesh.position.z = Math.sin(obj.orbitAngle) * obj.orbitRadius;
+            } else if (obj.type === 'nebula') {
+                // Pulse nebula clouds
+                const pulse = 1 + Math.sin(time * obj.pulseSpeed) * 0.2;
+                obj.mesh.scale.set(pulse, pulse, pulse);
+            } else if (obj.type === 'stars') {
+                // Gentle twinkle effect
+                obj.mesh.material.opacity = 0.6 + Math.sin(time * 2) * 0.2;
+            }
+        });
     }
     
     createCheckeredTexture(baseColor) {
@@ -1656,6 +1856,9 @@ export class SceneManager {
         const currentTime = performance.now();
         const deltaTime = (currentTime - this.lastTime) / 1000;
         this.lastTime = currentTime;
+        
+        // Update space environment
+        this.updateSpaceEnvironment(deltaTime);
         
         // Update physics
         if (this.physicsManager) {
