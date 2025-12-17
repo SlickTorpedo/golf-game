@@ -355,7 +355,10 @@ app.get('/api/maps', async (req, res) => {
 
 app.get('/api/map/:name', async (req, res) => {
     try {
-        const fileName = `${req.params.name}.json`;
+        // Add .json extension only if not already present
+        const fileName = req.params.name.endsWith('.json') 
+            ? req.params.name 
+            : `${req.params.name}.json`;
         const filePath = path.join(MAPS_DIR, fileName);
         
         const content = await fs.readFile(filePath, 'utf8');

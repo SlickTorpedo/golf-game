@@ -215,12 +215,12 @@ export class PhysicsManager {
                         const dirX = dx / distance;
                         const dirZ = dz / distance;
                         
-                        // Apply strong radial push - 1.5x multiplier for good launch
-                        const pushStrength = bumper.pushStrength * 1.5;
+                        // Apply MUCH stronger radial push - 4x multiplier for powerful launch
+                        const pushStrength = bumper.pushStrength * 4;
                         bumperBall.velocity.x = dirX * pushStrength;
                         bumperBall.velocity.z = dirZ * pushStrength;
-                        // Add upward velocity for bounce effect
-                        bumperBall.velocity.y = pushStrength * 0.4;
+                        // Minimal upward velocity - focus on horizontal push
+                        bumperBall.velocity.y = pushStrength * 0.15;
                         
                         bumperBall.bumperCooldown = now;
                         console.log('🔴 Bumper triggered! Push velocity:', pushStrength, 'direction:', dirX, dirZ);

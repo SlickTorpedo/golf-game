@@ -1,5 +1,5 @@
 {
-  "name": "_playtest_",
+  "name": "Bumper City",
   "levels": [
     {
       "number": 1,
@@ -462,15 +462,6 @@
           },
           "rotationY": 0,
           "strength": 20
-        },
-        {
-          "position": {
-            "x": -5,
-            "y": 0,
-            "z": -30
-          },
-          "rotationY": 270,
-          "strength": 50
         }
       ],
       "bumpers": [
@@ -772,17 +763,7 @@
           "strength": 15
         }
       ],
-      "speedBoosts": [
-        {
-          "position": {
-            "x": -6,
-            "y": 0,
-            "z": -36
-          },
-          "rotationY": 180,
-          "strength": 50
-        }
-      ],
+      "speedBoosts": [],
       "lava": [
         {
           "position": {
@@ -851,7 +832,6 @@
   "settings": {
     "skyColor": 8900331,
     "groundColor": 2263842,
-    "gravity": -30,
-    "levelSize": 100
+    "gravity": -30
   }
 }
