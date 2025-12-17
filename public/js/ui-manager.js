@@ -76,6 +76,7 @@ export const UI = {
         boostSfx: document.getElementById('boost-sfx'),
         bounceSfx: document.getElementById('bounce-sfx'),
         bumpSfx: document.getElementById('bump-sfx'),
+        collisionSfx: document.getElementById('collision-sfx'),
         ballHitVariations: [], // Will be populated with different pitch versions
         proximityAudio: null // Created dynamically for powerup proximity
     },

@@ -96,6 +96,39 @@ export class PhysicsManager {
                 ball = bodyA;
             }
             
+            // Check if collision is between ball and wall
+            let wallBall = null;
+            let wall = null;
+            
+            if (bodyA.mass === 0 && !bodyA.isBouncePad && !bodyA.isBumper && !bodyA.isSpeedBoost && 
+                bodyB.shapes[0] && bodyB.shapes[0].radius === 0.5) {
+                wall = bodyA;
+                wallBall = bodyB;
+            } else if (bodyB.mass === 0 && !bodyB.isBouncePad && !bodyB.isBumper && !bodyB.isSpeedBoost && 
+                       bodyA.shapes[0] && bodyA.shapes[0].radius === 0.5) {
+                wall = bodyB;
+                wallBall = bodyA;
+            }
+            
+            if (wallBall && wall) {
+                // Initialize cooldown timer if not exists
+                if (!wallBall.wallCollisionCooldown) {
+                    wallBall.wallCollisionCooldown = 0;
+                }
+                
+                // Only play sound if cooldown expired and ball is moving fast enough
+                const now = Date.now();
+                const speed = wallBall.velocity.length();
+                if (now - wallBall.wallCollisionCooldown > 100 && speed > 3) {
+                    wallBall.wallCollisionCooldown = now;
+                    
+                    // Play collision sound
+                    if (this.audioManager) {
+                        this.audioManager.playCollisionSound();
+                    }
+                }
+            }
+            
             if (ball && bouncePad) {
                 // Initialize cooldown timer if not exists
                 if (!ball.bouncePadCooldown) {
@@ -292,6 +325,25 @@ export class PhysicsManager {
         console.log('✅ Physics world destroyed');
     }
     
+    clearCustomObjects() {
+        console.log('🧹 Clearing custom map objects from physics...');
+        
+        // Remove all bodies except ground, walls (boundary), and balls
+        const bodiesToRemove = [];
+        this.world.bodies.forEach(body => {
+            // Keep ground, boundary walls, and balls
+            if (!body.isGround && !body.isBoundaryWall && !body.isBall) {
+                bodiesToRemove.push(body);
+            }
+        });
+        
+        bodiesToRemove.forEach(body => {
+            this.world.removeBody(body);
+        });
+        
+        console.log(`✅ Removed ${bodiesToRemove.length} custom objects from physics`);
+    }
+    
     setGravity(gravity) {
         this.defaultGravity = gravity;
         this.world.gravity.set(0, gravity, 0);
@@ -374,6 +426,7 @@ export class PhysicsManager {
             material: this.groundMaterial,
             position: new CANNON.Vec3(0, -groundThickness / 2, 0)
         });
+        ground.isGround = true; // Mark as ground for identification
         ground.addShape(new CANNON.Box(new CANNON.Vec3(groundSize / 2, groundThickness / 2, groundSize / 2)));
         this.world.addBody(ground);
         this.groundBodies.push(ground);
@@ -399,6 +452,7 @@ export class PhysicsManager {
             linearDamping: 0.9, // Air resistance - stops a bit faster
             angularDamping: 0.3 // Rotational damping to slow rolling
         });
+        body.isBall = true; // Mark as ball for identification
         body.addShape(shape);
         body.position.set(mesh.position.x, mesh.position.y, mesh.position.z);
         
@@ -413,7 +467,7 @@ export class PhysicsManager {
         return body;
     }
     
-    createWall(position, size, rotationY = 0, color = 0x8b4513) {
+    createWall(position, size, rotationY = 0, color = 0x8b4513, isBoundary = false) {
         // Create visual mesh
         const geometry = new THREE.BoxGeometry(size.x, size.y, size.z);
         const wallTexture = this.createWallTexture(color);
@@ -422,13 +476,18 @@ export class PhysicsManager {
             color: color,
             map: wallTexture,
             roughness: 0.8,
-            metalness: 0.2
+            metalness: 0.2,
+            // Make boundary walls invisible
+            transparent: isBoundary,
+            opacity: isBoundary ? 0 : 1
         });
         const mesh = new THREE.Mesh(geometry, material);
         mesh.rotation.y = (rotationY * Math.PI) / 180;
         mesh.position.set(position.x, position.y, position.z);
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
+        mesh.castShadow = !isBoundary; // Don't cast shadows if invisible
+        mesh.receiveShadow = !isBoundary; // Don't receive shadows if invisible
+        // Tag boundary walls differently so they don't get removed
+        mesh.userData.type = isBoundary ? 'boundary-wall' : 'wall';
         this.scene.add(mesh);
         
         // Create physics body
@@ -437,6 +496,7 @@ export class PhysicsManager {
             mass: 0, // Static
             material: this.wallMaterial
         });
+        body.isBoundaryWall = isBoundary; // Mark boundary walls
         body.addShape(shape);
         body.position.set(position.x, position.y, position.z);
         
@@ -460,6 +520,7 @@ export class PhysicsManager {
         });
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.set(position.x, position.y, position.z);
+        mesh.userData.type = 'ramp'; // Tag for removal
         
         // Rotate the mesh for ramp angle (in radians)
         const angleRad = (angle * Math.PI) / 180;

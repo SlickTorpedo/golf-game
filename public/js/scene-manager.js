@@ -44,6 +44,8 @@ export class SceneManager {
         this.currentHoleIndex = 0;
         this.holes = [];
         this.playerScores = new Map(); // Track strokes per player per hole
+        this.isTransitioningLevels = false; // Prevent double level transitions
+        this.allowHoleCheck = true; // Prevent hole checking during level transitions
         
         // Multiplayer sync
         this.lastSyncTime = 0;
@@ -157,10 +159,15 @@ export class SceneManager {
         this.totalPlayers = players.length;
         this.localPlayerId = localPlayerId;
         
-        // Set map data (expecting new multi-hole format)
+        // Set map data (expecting new multi-level format)
         this.mapData = mapData;
-        this.holes = mapData?.holes || [];
+        this.holes = mapData?.levels || mapData?.holes || [];
         this.currentHoleIndex = 0;
+        
+        // If no map data provided, log error but continue with default
+        if (!mapData || this.holes.length === 0) {
+            console.warn('⚠️ No map data provided or empty levels, will use default hole');
+        }
         
         // Initialize player scores
         players.forEach(player => {
@@ -289,25 +296,29 @@ export class SceneManager {
         // North wall (back)
         this.physicsManager.createWall(
             { x: 0, y: wallHeight / 2, z: -halfSize },
-            { x: playAreaSize, y: wallHeight, z: wallThickness }
+            { x: playAreaSize, y: wallHeight, z: wallThickness },
+            0, 0x8b4513, true
         );
         
         // South wall (front)
         this.physicsManager.createWall(
             { x: 0, y: wallHeight / 2, z: halfSize },
-            { x: playAreaSize, y: wallHeight, z: wallThickness }
+            { x: playAreaSize, y: wallHeight, z: wallThickness },
+            0, 0x8b4513, true
         );
         
         // West wall (left)
         this.physicsManager.createWall(
             { x: -halfSize, y: wallHeight / 2, z: 0 },
-            { x: wallThickness, y: wallHeight, z: playAreaSize }
+            { x: wallThickness, y: wallHeight, z: playAreaSize },
+            0, 0x8b4513, true
         );
         
         // East wall (right)
         this.physicsManager.createWall(
             { x: halfSize, y: wallHeight / 2, z: 0 },
-            { x: wallThickness, y: wallHeight, z: playAreaSize }
+            { x: wallThickness, y: wallHeight, z: playAreaSize },
+            0, 0x8b4513, true
         );
         
         // Load the first hole
@@ -364,7 +375,9 @@ export class SceneManager {
         );
         
         // Handle window resize
-        window.addEventListener('resize', () => this.onWindowResize());
+        // Store resize handler so we can remove it later
+        this.resizeHandler = () => this.onWindowResize();
+        window.addEventListener('resize', this.resizeHandler);
         
         // Update UI
         console.log('📊 Updating initial scoreboard with', players.length, 'players');
@@ -616,6 +629,7 @@ export class SceneManager {
         fanGroup.position.set(position.x, position.y, position.z);
         fanGroup.rotation.y = (rotationY * Math.PI) / 180;
         fanGroup.rotation.x = (angle * Math.PI) / 180;
+        fanGroup.userData.type = 'fan'; // Tag for removal
         
         this.scene.add(fanGroup);
         
@@ -678,6 +692,7 @@ export class SceneManager {
         
         padGroup.position.set(position.x, position.y, position.z);
         padGroup.rotation.y = (rotationY * Math.PI) / 180;
+        padGroup.userData.type = 'bouncePad'; // Tag for removal
         
         this.scene.add(padGroup);
         
@@ -742,6 +757,7 @@ export class SceneManager {
         
         bumperGroup.position.set(position.x, position.y, position.z);
         bumperGroup.rotation.y = (rotationY * Math.PI) / 180;
+        bumperGroup.userData.type = 'bumper'; // Tag for removal
         
         this.scene.add(bumperGroup);
         
@@ -763,48 +779,63 @@ export class SceneManager {
     createSpeedBoost(position, rotationY = 0, strength = 50) {
         const boostGroup = new THREE.Group();
         
-        // Base pad (bright yellow)
-        const baseGeometry = new THREE.CylinderGeometry(0.8, 0.8, 0.2, 32);
+        // Base pad (bright yellow rectangle)
+        const baseGeometry = new THREE.BoxGeometry(1.5, 0.2, 2.5);
         const baseMaterial = new THREE.MeshStandardMaterial({ 
             color: 0xffff00,
             emissive: 0xffff00,
-            emissiveIntensity: 0.5,
+            emissiveIntensity: 0.4,
             roughness: 0.3,
-            metalness: 0.7
+            metalness: 0.6
         });
         const base = new THREE.Mesh(baseGeometry, baseMaterial);
         boostGroup.add(base);
         
-        // Direction arrows (3 arrows pointing forward)
+        // Direction arrows (3 simple arrows pointing forward)
         const arrowMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0xff6600,
-            emissive: 0xff6600,
-            emissiveIntensity: 0.8
+            color: 0xff0000,
+            emissive: 0xff0000,
+            emissiveIntensity: 0.7
         });
         
         for (let i = 0; i < 3; i++) {
-            // Arrow shaft
+            const zOffset = 0.7 - (i * 0.7); // Top to bottom
+            
+            // Arrow main line (shaft)
             const shaft = new THREE.Mesh(
-                new THREE.BoxGeometry(0.15, 0.05, 0.4),
+                new THREE.BoxGeometry(0.08, 0.05, 0.5),
                 arrowMaterial
             );
             shaft.position.y = 0.15;
-            shaft.position.z = -0.2 + (i * 0.25);
+            shaft.position.z = zOffset;
             boostGroup.add(shaft);
             
-            // Arrow head (triangle)
-            const head = new THREE.Mesh(
-                new THREE.ConeGeometry(0.12, 0.2, 3),
+            // Left 45-degree piece (arrow head left side)
+            const leftPiece = new THREE.Mesh(
+                new THREE.BoxGeometry(0.08, 0.05, 0.25),
                 arrowMaterial
             );
-            head.rotation.x = Math.PI / 2;
-            head.position.y = 0.15;
-            head.position.z = -0.4 + (i * 0.25);
-            boostGroup.add(head);
+            leftPiece.rotation.y = -Math.PI / 4; // -45 degrees
+            leftPiece.position.y = 0.15;
+            leftPiece.position.x = -0.09;
+            leftPiece.position.z = zOffset - 0.34;
+            boostGroup.add(leftPiece);
+            
+            // Right 45-degree piece (arrow head right side)
+            const rightPiece = new THREE.Mesh(
+                new THREE.BoxGeometry(0.08, 0.05, 0.25),
+                arrowMaterial
+            );
+            rightPiece.rotation.y = Math.PI / 4; // 45 degrees
+            rightPiece.position.y = 0.15;
+            rightPiece.position.x = 0.09;
+            rightPiece.position.z = zOffset - 0.34;
+            boostGroup.add(rightPiece);
         }
         
         boostGroup.position.set(position.x, position.y, position.z);
         boostGroup.rotation.y = (rotationY * Math.PI) / 180;
+        boostGroup.userData.type = 'speedBoost'; // Tag for removal
         
         this.scene.add(boostGroup);
         
@@ -837,7 +868,7 @@ export class SceneManager {
         const holeOpening = new THREE.Mesh(holeOpeningGeometry, holeOpeningMaterial);
         holeOpening.rotation.x = -Math.PI / 2;
         holeOpening.position.set(position.x, position.y + 0.01, position.z);
-        holeOpening
+        holeOpening.userData.type = 'hole-visual';
         this.scene.add(holeOpening);
         
         // Thin rim ring around hole edge
@@ -849,7 +880,7 @@ export class SceneManager {
         const rim = new THREE.Mesh(rimGeometry, rimMaterial);
         rim.rotation.x = -Math.PI / 2;
         rim.position.set(position.x, position.y + 0.02, position.z);
-        rim
+        rim.userData.type = 'hole-visual';
         this.scene.add(rim);
         
         // Sloped funnel/cup leading into hole - solid cylinder with slope
@@ -862,8 +893,7 @@ export class SceneManager {
         });
         const funnel = new THREE.Mesh(funnelGeometry, funnelMaterial);
         funnel.position.set(position.x, position.y - slopeFunnelDepth/2, position.z);
-        funnel
-        funnel
+        funnel.userData.type = 'hole-visual';
         this.scene.add(funnel);
         
         // NO PHYSICS for funnel or flag - let the ball roll through freely!
@@ -879,7 +909,7 @@ export class SceneManager {
         });
         const hole = new THREE.Mesh(holeGeometry, holeMaterial);
         hole.position.set(position.x, position.y - slopeFunnelDepth - holeDepth/2, position.z);
-        hole
+        hole.userData.type = 'hole-visual';
         this.scene.add(hole);
         
         // Create visible hole bottom
@@ -892,7 +922,7 @@ export class SceneManager {
         const bottom = new THREE.Mesh(bottomGeometry, bottomMaterial);
         bottom.rotation.x = -Math.PI / 2;
         bottom.position.set(position.x, holeBottomY + 0.02, position.z);
-        bottom
+        bottom.userData.type = 'hole-visual';
         this.scene.add(bottom);
         
         // Create LARGE and THICK catch area physics - much bigger than visible hole
@@ -918,7 +948,7 @@ export class SceneManager {
         });
         const pole = new THREE.Mesh(poleGeometry, poleMaterial);
         pole.position.set(position.x, position.y + 1.75, position.z);
-        pole
+        pole.userData = { type: 'hole-visual', subtype: 'pole' };
         this.scene.add(pole);
         
         // Flag (NO PHYSICS - visual only)
@@ -930,7 +960,7 @@ export class SceneManager {
         });
         const flag = new THREE.Mesh(flagGeometry, flagMaterial);
         flag.position.set(position.x + 0.4, position.y + 3.2, position.z);
-        flag
+        flag.userData = { type: 'hole-visual', subtype: 'flag' };
         this.scene.add(flag);
         
         // NO physics body for flag/pole - they are visual only!
@@ -947,6 +977,25 @@ export class SceneManager {
         };
         
         console.log('⛳ Hole created at', position);
+    }
+    
+    updateHoleVisual(holeData) {
+        // Remove old hole visuals
+        const objectsToRemove = [];
+        this.scene.children.forEach(child => {
+            if (child.userData && child.userData.type === 'hole-visual') {
+                objectsToRemove.push(child);
+            }
+        });
+        
+        objectsToRemove.forEach(obj => {
+            this.scene.remove(obj);
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) obj.material.dispose();
+        });
+        
+        // Create new hole at new position
+        this.createHole(holeData);
     }
     
     removePlayerBall(playerId) {
@@ -1013,6 +1062,9 @@ export class SceneManager {
     
     checkBallInHole() {
         if (this.hole.scored) return; // Already scored
+        if (!this.allowHoleCheck) {
+            return; // Don't check during level transitions
+        }
         
         const ballPos = this.localBall.position;
         const holePos = this.hole.position;
@@ -1021,6 +1073,11 @@ export class SceneManager {
         const dx = ballPos.x - holePos.x;
         const dz = ballPos.z - holePos.z;
         const distance2D = Math.sqrt(dx * dx + dz * dz);
+        
+        // Debug logging when ball is near hole
+        if (distance2D < 10) {
+            console.log(`🎯 Ball at (${ballPos.x.toFixed(1)}, ${ballPos.y.toFixed(1)}, ${ballPos.z.toFixed(1)}), Hole at (${holePos.x}, ${holePos.y}, ${holePos.z}), Distance: ${distance2D.toFixed(2)}`);
+        }
         
         // Check if ball is in hole and has settled at the bottom
         if (distance2D < this.hole.radius * 0.8 && ballPos.y <= this.hole.bottomY + 0.6) {
@@ -1077,27 +1134,246 @@ export class SceneManager {
     checkGameCompletion() {
         console.log(`📊 Players scored: ${this.playersScored.size}/${this.totalPlayers}`);
         
+        // Prevent double transitions from local + network events
+        if (this.isTransitioningLevels) {
+            console.log('⏸️ Already transitioning levels, skipping...');
+            return;
+        }
+        
         if (this.playersScored.size >= this.totalPlayers) {
-            console.log('🏁 All players finished! Game over!');
+            // Check if there are more holes/levels to play
+            if (this.currentHoleIndex < this.holes.length - 1) {
+                console.log(`⛳ Level complete! Moving to next level (${this.currentHoleIndex + 2}/${this.holes.length})`);
+                
+                // Set transition flag
+                this.isTransitioningLevels = true;
+                
+                // Don't play game finished sound - just level complete
+                // Game finished sound only plays when ALL levels are done
+                
+                // Advance to next hole after delay
+                setTimeout(() => {
+                    this.advanceToNextHole();
+                    // Reset flag after transition
+                    this.isTransitioningLevels = false;
+                }, 3000);
+            } else {
+                console.log('🏁 All levels finished! Game complete!');
+                
+                // Set transition flag to prevent restart spam
+                this.isTransitioningLevels = true;
+                
+                // Play game finished sound and stop music
+                if (window.audioManager) {
+                    window.audioManager.playGameFinishedSound();
+                }
+                
+                // Return to lobby after a delay
+                setTimeout(() => {
+                    console.log('🎮 Returning to lobby...');
+                    
+                    // Stop animation loop
+                    if (this.animationId) {
+                        cancelAnimationFrame(this.animationId);
+                        this.animationId = null;
+                    }
+                    
+                    // Remove resize event listener
+                    if (this.resizeHandler) {
+                        window.removeEventListener('resize', this.resizeHandler);
+                        this.resizeHandler = null;
+                    }
+                    
+                    // Clean up game renderer to free resources
+                    if (this.renderer) {
+                        this.renderer.dispose();
+                        const canvas = this.renderer.domElement;
+                        if (canvas && canvas.parentNode) {
+                            canvas.parentNode.removeChild(canvas);
+                        }
+                        this.renderer = null;
+                    }
+                    
+                    // Clean up scene
+                    if (this.scene) {
+                        this.scene.clear();
+                        this.scene = null;
+                    }
+                    
+                    // Reset other components
+                    this.physicsManager = null;
+                    this.powerupManager = null;
+                    this.shotMechanics = null;
+                    this.controls = null;
+                    
+                    // Reset game initialization flag so game can be restarted
+                    this.gameInitialized = false;
+                    
+                    // Reset game state flag
+                    if (window.networkManager) {
+                        window.networkManager.gameState.gameStarted = false;
+                    }
+                    
+                    // Switch back to lobby screen
+                    document.getElementById('game-screen').classList.remove('active');
+                    document.getElementById('lobby-screen').classList.add('active');
+                    
+                    // Reset transition flag
+                    this.isTransitioningLevels = false;
+                    
+                    console.log('✅ Returned to lobby - ready for new game');
+                }, 5000);
+            }
+        }
+    }
+    
+    advanceToNextHole() {
+        console.log('➡️ Advancing to next level...');
+        
+        // Reset hole scored flag
+        if (this.hole) {
+            this.hole.scored = false;
+        }
+        
+        // Reset players scored for next hole
+        this.playersScored.clear();
+        
+        // Increment hole index
+        this.currentHoleIndex++;
+        
+        // Validate hole index
+        if (this.currentHoleIndex >= this.holes.length) {
+            console.error('❌ Invalid hole index:', this.currentHoleIndex);
+            return;
+        }
+        
+        // Clear all map objects from scene and physics
+        this.clearMapObjects();
+        
+        // Load next hole
+        this.loadHole(this.currentHoleIndex);
+        
+        // Get next hole data
+        const nextHole = this.holes[this.currentHoleIndex];
+        if (!nextHole) {
+            console.error('❌ No hole data for index:', this.currentHoleIndex);
+            return;
+        }
+        
+        const startPos = nextHole.startPoint;
+        // Use a proper height - y should be 3 for ball spawn, not 0 or 1
+        const ballStartY = (startPos.y !== undefined && startPos.y > 0) ? startPos.y : 3;
+        
+        console.log(`🗺️ Next hole data:`, nextHole);
+        console.log(`🏁 Resetting ball to start: (${startPos.x}, ${ballStartY}, ${startPos.z})`);
+        console.log(`⛳ Hole position should be:`, nextHole.hole);
+        
+        // Disable hole checking during ball reset
+        this.allowHoleCheck = false;
+        
+        // The hole was already created by loadHole, no need to create it again
+        // (updateHoleVisual was creating a duplicate)
+        
+        // Reset all player balls
+        this.playerBalls.forEach((ballMesh, playerId) => {
+            // Get physics body from meshToBody Map
+            const ballBody = this.physicsManager.meshToBody.get(ballMesh);
             
-            // Play game finished sound and stop music
-            if (window.audioManager) {
-                window.audioManager.playGameFinishedSound();
+            if (ballBody) {
+                // CRITICAL: Reset hole settling state so physics doesn't lock ball to old hole
+                ballBody.holeSettling = 0;
+                ballBody.collisionFilterGroup = 1;
+                ballBody.collisionFilterMask = -1;
+                
+                // Reset physics body position and velocity
+                ballBody.position.set(startPos.x, ballStartY, startPos.z);
+                ballBody.velocity.set(0, 0, 0);
+                ballBody.angularVelocity.set(0, 0, 0);
+                ballBody.quaternion.set(0, 0, 0, 1);
+                
+                // CRITICAL: Wake up the physics body to apply the position change
+                ballBody.wakeUp();
+                
+                console.log('📍 Ball physics reset to:', ballBody.position);
             }
             
-            // Show game over message after a delay
-            setTimeout(() => {
-                console.log('🔄 Restarting game in 3 seconds...');
-                
-                setTimeout(() => {
-                    this.restartGame();
-                    // Restart game music
-                    if (window.audioManager) {
-                        window.audioManager.playGameMusic();
-                    }
-                }, 3000);
-            }, 2000);
+            // Reset mesh position and rotation
+            ballMesh.position.set(startPos.x, ballStartY, startPos.z);
+            ballMesh.quaternion.set(0, 0, 0, 1);
+            
+            // Clear active powerup effects for this player
+            if (this.powerupManager && this.powerupManager.activeEffects) {
+                this.powerupManager.activeEffects.delete(playerId);
+            }
+        });
+        
+        // Reset stroke counter for new level
+        if (this.shotMechanics) {
+            this.shotMechanics.resetStrokeCount();
         }
+        
+        // Re-enable controls and hole checking after physics settles
+        setTimeout(() => {
+            this.allowHoleCheck = true;
+            if (this.shotMechanics) {
+                this.shotMechanics.enable();
+                console.log('🔓 Controls re-enabled for next level!');
+            }
+        }, 1000); // Wait 1 second for physics to fully settle
+        
+        // Update UI to show new hole number and par
+        const holeElement = document.getElementById('current-hole');
+        const parElement = document.getElementById('par-value');
+        if (holeElement) holeElement.textContent = nextHole.number || (this.currentHoleIndex + 1);
+        if (parElement) parElement.textContent = nextHole.par || 3;
+        
+        // Spawn powerups for new hole
+        if (this.powerupManager) {
+            this.powerupManager.spawnPowerups(nextHole.powerupSpawns || []);
+        }
+        
+        console.log(`✅ Level ${this.currentHoleIndex + 1} loaded!`);
+    }
+    
+    clearMapObjects() {
+        // Remove all custom map objects from physics
+        this.physicsManager.clearCustomObjects();
+        
+        // Remove visual objects (walls, ramps, hole visuals, etc.) from scene
+        const objectsToRemove = [];
+        this.scene.children.forEach(child => {
+            if (child.userData && (
+                child.userData.type === 'wall' ||
+                child.userData.type === 'ramp' ||
+                child.userData.type === 'fan' ||
+                child.userData.type === 'bouncePad' ||
+                child.userData.type === 'bumper' ||
+                child.userData.type === 'speedBoost' ||
+                child.userData.type === 'hole-visual' // Remove hole visuals too!
+            )) {
+                objectsToRemove.push(child);
+            }
+        });
+        
+        objectsToRemove.forEach(obj => {
+            this.scene.remove(obj);
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+                if (Array.isArray(obj.material)) {
+                    obj.material.forEach(mat => mat.dispose());
+                } else {
+                    obj.material.dispose();
+                }
+            }
+        });
+        
+        // Clear object reference arrays
+        this.bouncePads = [];
+        this.bumpers = [];
+        this.speedBoosts = [];
+        this.fans = [];
+        
+        console.log(`🧹 Cleared ${objectsToRemove.length} map objects from scene`);
     }
     
     restartGame() {
@@ -1285,6 +1561,16 @@ export class SceneManager {
     }
     
     createConfetti(position) {
+        // Clear any existing confetti first
+        if (this.confettiParticles && this.confettiParticles.length > 0) {
+            for (const particle of this.confettiParticles) {
+                this.scene.remove(particle);
+                if (particle.geometry) particle.geometry.dispose();
+                if (particle.material) particle.material.dispose();
+            }
+            this.confettiParticles = [];
+        }
+        
         const particleCount = 100;
         const particles = [];
         const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff];
@@ -1296,22 +1582,23 @@ export class SceneManager {
             });
             const particle = new THREE.Mesh(geometry, material);
             
-            // Start at hole position, slightly above
+            // Start at hole position with wider spread
             particle.position.set(
-                position.x + (Math.random() - 0.5) * 2,
-                position.y + 2,
-                position.z + (Math.random() - 0.5) * 2
+                position.x + (Math.random() - 0.5) * 1,
+                position.y + 3 + Math.random() * 2, // Start higher with randomness
+                position.z + (Math.random() - 0.5) * 1
             );
             
-            // Random velocity
+            // Random velocity - stronger outward burst
             particle.velocity = new THREE.Vector3(
-                (Math.random() - 0.5) * 10,
-                Math.random() * 15 + 5,
-                (Math.random() - 0.5) * 10
+                (Math.random() - 0.5) * 15,
+                Math.random() * 20 + 10,
+                (Math.random() - 0.5) * 15
             );
             
-            particle.gravity = -20;
-            particle.life = 3.0; // 3 seconds
+            particle.gravity = -30;
+            particle.life = 2.5; // 2.5 seconds
+            particle.bounced = false; // Track if particle has bounced
             
             this.scene.add(particle);
             particles.push(particle);
@@ -1363,7 +1650,7 @@ export class SceneManager {
     }
     
     animate() {
-        requestAnimationFrame(() => this.animate());
+        this.animationId = requestAnimationFrame(() => this.animate());
         
         // Calculate delta time
         const currentTime = performance.now();
@@ -1500,13 +1787,28 @@ export class SceneManager {
                 particle.position.y += particle.velocity.y * deltaTime;
                 particle.position.z += particle.velocity.z * deltaTime;
                 
+                // Add rotation for visual effect
+                particle.rotation.x += particle.velocity.x * deltaTime;
+                particle.rotation.z += particle.velocity.z * deltaTime;
+                
+                // Bounce off ground once
+                if (particle.position.y < 0 && particle.velocity.y < 0 && !particle.bounced) {
+                    particle.position.y = 0;
+                    particle.velocity.y *= -0.4; // Bounce with energy loss
+                    particle.velocity.x *= 0.7; // Friction
+                    particle.velocity.z *= 0.7;
+                    particle.bounced = true;
+                }
+                
                 // Fade out
                 particle.material.opacity = 1 - (elapsed / particle.life);
                 particle.material.transparent = true;
                 
-                // Remove if expired
-                if (elapsed > particle.life) {
+                // Remove if expired or fell far below ground
+                if (elapsed > particle.life || particle.position.y < -3) {
                     this.scene.remove(particle);
+                    if (particle.geometry) particle.geometry.dispose();
+                    if (particle.material) particle.material.dispose();
                     this.confettiParticles.splice(i, 1);
                 }
             }
@@ -1528,7 +1830,12 @@ export class SceneManager {
     }
     
     onWindowResize() {
+        // Don't resize if renderer/camera have been cleaned up
+        if (!this.renderer || !this.camera) return;
+        
         const container = document.getElementById('game-canvas');
+        if (!container) return;
+        
         this.camera.aspect = container.clientWidth / container.clientHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(container.clientWidth, container.clientHeight);

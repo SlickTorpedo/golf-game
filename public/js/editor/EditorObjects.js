@@ -3,26 +3,32 @@
 import * as THREE from 'three';
 
 export class EditorObjects {
-    constructor(scene) {
-        this.scene = scene;
-        this.fanBlades = [];
+    constructor(editor) {
+        this.editor = editor;
+        this.scene = editor.scene;
     }
     
-    createStartPoint(position = { x: 0, y: 0, z: 30 }) {
+    createStartPoint() {
+        const position = this.editor.state.mapData.startPoint;
         const geometry = new THREE.ConeGeometry(0.8, 2, 16);
         const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
         const startMesh = new THREE.Mesh(geometry, material);
         startMesh.position.set(position.x, 1, position.z);
-        startMesh.userData = { type: 'start', data: position };
+        startMesh.userData = { type: 'start', data: this.editor.state.mapData.startPoint };
+        this.scene.scene.add(startMesh);
+        this.scene.objects.push(startMesh);
         return startMesh;
     }
     
-    createHole(position = { x: 0, y: 0, z: -30, radius: 1.2 }) {
-        const geometry = new THREE.CylinderGeometry(position.radius, position.radius, 0.5, 32);
+    createHole() {
+        const holeData = this.editor.state.mapData.hole;
+        const geometry = new THREE.CylinderGeometry(holeData.radius, holeData.radius, 0.5, 32);
         const material = new THREE.MeshLambertMaterial({ color: 0x000000 });
         const holeMesh = new THREE.Mesh(geometry, material);
-        holeMesh.position.set(position.x, 0.25, position.z);
-        holeMesh.userData = { type: 'hole', data: position };
+        holeMesh.position.set(holeData.x, 0.25, holeData.z);
+        holeMesh.userData = { type: 'hole', data: this.editor.state.mapData.hole };
+        this.scene.scene.add(holeMesh);
+        this.scene.objects.push(holeMesh);
         return holeMesh;
     }
     
@@ -170,7 +176,7 @@ export class EditorObjects {
             particles: particles
         };
         
-        this.fanBlades.push(bladesGroup);
+        this.scene.fanBlades.push(bladesGroup);
         
         return fanGroup;
     }
@@ -266,44 +272,58 @@ export class EditorObjects {
     createSpeedBoost(position, rotationY = 0, strength = 50) {
         const boostGroup = new THREE.Group();
         
-        // Base pad (bright yellow)
-        const baseGeometry = new THREE.CylinderGeometry(0.8, 0.8, 0.2, 32);
+        // Base pad (bright yellow rectangle)
+        const baseGeometry = new THREE.BoxGeometry(1.5, 0.2, 2.5);
         const baseMaterial = new THREE.MeshStandardMaterial({ 
             color: 0xffff00,
             emissive: 0xffff00,
-            emissiveIntensity: 0.5,
+            emissiveIntensity: 0.4,
             roughness: 0.3,
-            metalness: 0.7
+            metalness: 0.6
         });
         const base = new THREE.Mesh(baseGeometry, baseMaterial);
         boostGroup.add(base);
         
-        // Direction arrows (3 arrows pointing forward)
+        // Direction arrows (3 simple arrows pointing forward)
         const arrowMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0xff6600,
-            emissive: 0xff6600,
-            emissiveIntensity: 0.8
+            color: 0xff0000,
+            emissive: 0xff0000,
+            emissiveIntensity: 0.7
         });
         
         for (let i = 0; i < 3; i++) {
-            // Arrow shaft
+            const zOffset = 0.7 - (i * 0.7); // Top to bottom
+            
+            // Arrow main line (shaft)
             const shaft = new THREE.Mesh(
-                new THREE.BoxGeometry(0.15, 0.05, 0.4),
+                new THREE.BoxGeometry(0.08, 0.05, 0.5),
                 arrowMaterial
             );
             shaft.position.y = 0.15;
-            shaft.position.z = -0.2 + (i * 0.25);
+            shaft.position.z = zOffset;
             boostGroup.add(shaft);
             
-            // Arrow head (triangle)
-            const head = new THREE.Mesh(
-                new THREE.ConeGeometry(0.12, 0.2, 3),
+            // Left 45-degree piece (arrow head left side)
+            const leftPiece = new THREE.Mesh(
+                new THREE.BoxGeometry(0.08, 0.05, 0.25),
                 arrowMaterial
             );
-            head.rotation.x = Math.PI / 2;
-            head.position.y = 0.15;
-            head.position.z = -0.4 + (i * 0.25);
-            boostGroup.add(head);
+            leftPiece.rotation.y = -Math.PI / 4; // -45 degrees
+            leftPiece.position.y = 0.15;
+            leftPiece.position.x = -0.09;
+            leftPiece.position.z = zOffset - 0.34;
+            boostGroup.add(leftPiece);
+            
+            // Right 45-degree piece (arrow head right side)
+            const rightPiece = new THREE.Mesh(
+                new THREE.BoxGeometry(0.08, 0.05, 0.25),
+                arrowMaterial
+            );
+            rightPiece.rotation.y = Math.PI / 4; // 45 degrees
+            rightPiece.position.y = 0.15;
+            rightPiece.position.x = 0.09;
+            rightPiece.position.z = zOffset - 0.34;
+            boostGroup.add(rightPiece);
         }
         
         boostGroup.position.set(position.x, position.y, position.z);

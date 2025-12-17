@@ -238,8 +238,13 @@ export class NetworkManager {
                 });
                 list.appendChild(defaultItem);
                 
-                // Add custom maps
+                // Add custom maps (exclude maps starting with underscore)
                 maps.forEach(map => {
+                    // Skip maps that start with underscore (playtest/hidden maps)
+                    if (map.fileName && map.fileName.startsWith('_')) {
+                        return;
+                    }
+                    
                     const item = document.createElement('div');
                     item.className = 'map-selection-item';
                     
@@ -257,15 +262,15 @@ export class NetworkManager {
                     list.appendChild(item);
                 });
                 
-                modal.style.display = 'flex';
-                
-                // Cancel button
+                // Cancel button handler
                 const onCancel = () => {
                     modal.style.display = 'none';
                     cancelBtn.removeEventListener('click', onCancel);
-                    resolve(null);
+                    resolve(undefined); // Return undefined to indicate cancellation
                 };
                 cancelBtn.addEventListener('click', onCancel);
+                
+                modal.style.display = 'flex';
                 
             } catch (error) {
                 console.error('Error loading maps:', error);

@@ -14,6 +14,10 @@ export class EditorScene {
         this.objects = [];
         this.fanBlades = [];
         
+        // Grid settings
+        this.gridSnap = true;
+        this.gridSize = 1;
+        
         this.init(canvasId);
     }
     
@@ -147,6 +151,40 @@ export class EditorScene {
     
     updateSkyColor(color) {
         this.scene.background = new THREE.Color(color);
+    }
+    
+    createCheckeredTexture(baseColor) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        
+        const color = new THREE.Color(baseColor);
+        const r = Math.floor(color.r * 255);
+        const g = Math.floor(color.g * 255);
+        const b = Math.floor(color.b * 255);
+        
+        const r2 = Math.floor(r * 0.85);
+        const g2 = Math.floor(g * 0.85);
+        const b2 = Math.floor(b * 0.85);
+        
+        const lightColor = `rgb(${r}, ${g}, ${b})`;
+        const darkColor = `rgb(${r2}, ${g2}, ${b2})`;
+        
+        const squareSize = 32;
+        for (let x = 0; x < 8; x++) {
+            for (let y = 0; y < 8; y++) {
+                ctx.fillStyle = (x + y) % 2 === 0 ? lightColor : darkColor;
+                ctx.fillRect(x * squareSize, y * squareSize, squareSize, squareSize);
+            }
+        }
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(10, 10);
+        
+        return texture;
     }
     
     render() {

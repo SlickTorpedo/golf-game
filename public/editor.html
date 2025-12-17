@@ -26,9 +26,28 @@
                 <h2>Objects</h2>
                 
                 <div class="palette-section">
-                    <h3>🎮 Holes</h3>
-                    <div id="hole-list"></div>
-                    <button id="add-hole" class="btn-primary" style="width: 100%; margin-top: 8px;">+ Add Hole</button>
+                    <h3>🗺️ Map Levels</h3>
+                    <div class="map-name-display">
+                        <label>Map Name:</label>
+                        <input type="text" id="map-name-input" placeholder="My Awesome Map" style="width: 100%; padding: 6px; margin-top: 4px;">
+                    </div>
+                    <div class="level-info">
+                        <div class="current-level-header">
+                            <strong>Current Level:</strong>
+                        </div>
+                        <div class="current-level-display">
+                            <span id="current-level-name">Level 1</span>
+                            <button id="edit-level-name" class="icon-btn" title="Rename level">✏️</button>
+                        </div>
+                        <div class="level-par-display">
+                            Par: <input type="number" id="current-level-par" min="1" max="10" value="3" style="width: 50px;">
+                        </div>
+                    </div>
+                    <div class="levels-header">
+                        <strong>Levels in this Map:</strong>
+                    </div>
+                    <div id="level-list"></div>
+                    <button id="add-level" class="btn-primary" style="width: 100%; margin-top: 8px;">+ Add Level</button>
                 </div>
 
                 <div class="palette-section">
@@ -188,6 +207,6 @@
     }
     </script>
     <script type="module" src="js/editor/EditorState.js"></script>
-    <script type="module" src="js/map-editor.js"></script>
+    <script type="module" src="js/editor/MapEditor.js"></script>
 </body>
 </html>

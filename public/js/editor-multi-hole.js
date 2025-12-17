@@ -1,22 +1,23 @@
-// editor-multi-hole.js - Adds multi-hole support to the map editor
+// editor-multi-hole.js - Adds multi-level support to the map editor
 
-export class MultiHoleManager {
+export class MultiLevelManager {
     constructor(mapEditor) {
         this.editor = mapEditor;
-        this.currentHoleIndex = 0;
-        this.holes = [this.createDefaultHole()];
+        this.currentLevelIndex = 0;
+        this.levels = [this.createDefaultLevel()];
         
         this.init();
     }
     
     init() {
-        this.renderHoleList();
+        this.renderLevelList();
         this.setupEventListeners();
     }
     
-    createDefaultHole() {
+    createDefaultLevel(number = 1) {
         return {
-            number: 1,
+            number: number,
+            name: `Level ${number}`,
             par: 3,
             startPoint: { x: 0, y: 0, z: 30 },
             hole: { x: 0, y: 0, z: -30, radius: 1.2 },
@@ -31,205 +32,289 @@ export class MultiHoleManager {
     }
     
     setupEventListeners() {
-        document.getElementById('add-hole').addEventListener('click', () => {
-            this.addHole();
+        document.getElementById('add-level').addEventListener('click', () => {
+            this.addLevel();
+        });
+        
+        document.getElementById('edit-level-name')?.addEventListener('click', () => {
+            this.promptRenameCurrentLevel();
+        });
+        
+        document.getElementById('current-level-par')?.addEventListener('change', (e) => {
+            this.updateCurrentLevelPar(parseInt(e.target.value));
+        });
+        
+        document.getElementById('map-name-input')?.addEventListener('change', (e) => {
+            this.updateMapName(e.target.value);
         });
     }
     
-    renderHoleList() {
-        const holeList = document.getElementById('hole-list');
-        holeList.innerHTML = '';
+    renderLevelList() {
+        const levelList = document.getElementById('level-list');
+        levelList.innerHTML = '';
         
-        this.holes.forEach((hole, index) => {
+        this.levels.forEach((level, index) => {
             const item = document.createElement('div');
-            item.className = 'hole-item' + (index === this.currentHoleIndex ? ' active' : '');
+            item.className = 'level-item' + (index === this.currentLevelIndex ? ' active' : '');
             item.innerHTML = `
-                <div class="hole-item-info">
-                    <div class="hole-item-number">Hole ${hole.number}</div>
-                    <div class="hole-item-par">Par ${hole.par}</div>
+                <div class="level-item-info">
+                    <div class="level-item-number">${level.name || `Level ${level.number}`}</div>
+                    <div class="level-item-par">Par ${level.par}</div>
                 </div>
-                ${this.holes.length > 1 ? `<button class="hole-item-delete">×</button>` : ''}
+                ${this.levels.length > 1 ? `<button class="level-item-delete">×</button>` : ''}
             `;
             
             item.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('hole-item-delete')) {
-                    this.switchHole(index);
+                if (!e.target.classList.contains('level-item-delete')) {
+                    this.switchLevel(index);
                 }
             });
             
-            const deleteBtn = item.querySelector('.hole-item-delete');
+            const deleteBtn = item.querySelector('.level-item-delete');
             if (deleteBtn) {
                 deleteBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    this.deleteHole(index);
+                    this.deleteLevel(index);
                 });
             }
             
-            holeList.appendChild(item);
+            levelList.appendChild(item);
         });
+        
+        // Update the current level display
+        this.updateCurrentLevelDisplay();
     }
     
-    addHole() {
-        const newHole = this.createDefaultHole();
-        newHole.number = this.holes.length + 1;
-        newHole.par = 3;
+    updateCurrentLevelDisplay() {
+        const level = this.levels[this.currentLevelIndex];
+        const nameDisplay = document.getElementById('current-level-name');
+        const parInput = document.getElementById('current-level-par');
+        
+        if (nameDisplay) {
+            nameDisplay.textContent = level.name || `Level ${level.number}`;
+        }
+        if (parInput) {
+            parInput.value = level.par;
+        }
+    }
+    
+    updateMapName(name) {
+        if (name && name.trim()) {
+            this.editor.state.mapData.name = name.trim();
+            console.log(`🗺️ Map renamed to: ${name}`);
+        }
+    }
+    
+    addLevel() {
+        const levelNumber = this.levels.length + 1;
+        const newLevel = this.createDefaultLevel(levelNumber);
         
         // Offset start/hole positions so they don't overlap
-        newHole.startPoint.x += this.holes.length * 20;
-        newHole.hole.x += this.holes.length * 20;
+        newLevel.startPoint.x += this.levels.length * 20;
+        newLevel.hole.x += this.levels.length * 20;
         
-        this.holes.push(newHole);
-        this.renderHoleList();
-        this.switchHole(this.holes.length - 1);
+        this.levels.push(newLevel);
+        this.renderLevelList();
+        this.switchLevel(this.levels.length - 1);
         
-        console.log(`⛳ Added Hole ${newHole.number} (Par ${newHole.par})`);
+        console.log(`🎮 Added ${newLevel.name} (Par ${newLevel.par})`);
     }
     
-    deleteHole(index) {
-        if (this.holes.length === 1) {
-            alert('Cannot delete the last hole');
+    promptRenameCurrentLevel() {
+        const level = this.levels[this.currentLevelIndex];
+        const newName = prompt('Enter level name:', level.name || `Level ${level.number}`);
+        
+        if (newName && newName.trim()) {
+            level.name = newName.trim();
+            this.renderLevelList();
+            console.log(`✏️ Renamed to: ${level.name}`);
+        }
+    }
+    
+    updateCurrentLevelPar(newPar) {
+        if (newPar >= 1 && newPar <= 10) {
+            this.levels[this.currentLevelIndex].par = newPar;
+            this.renderLevelList();
+            console.log(`🎮 Updated par to ${newPar}`);
+        }
+    }
+    
+    deleteLevel(index) {
+        if (this.levels.length === 1) {
+            alert('Cannot delete the last level');
             return;
         }
         
-        if (!confirm(`Delete Hole ${this.holes[index].number}?`)) {
+        const levelName = this.levels[index].name || `Level ${this.levels[index].number}`;
+        if (!confirm(`Delete ${levelName}?`)) {
             return;
         }
         
-        this.holes.splice(index, 1);
+        this.levels.splice(index, 1);
         
-        // Renumber holes
-        this.holes.forEach((hole, i) => {
-            hole.number = i + 1;
+        // Renumber levels
+        this.levels.forEach((level, i) => {
+            level.number = i + 1;
         });
         
-        // Switch to previous hole if we deleted the current one
-        if (index === this.currentHoleIndex) {
-            this.currentHoleIndex = Math.max(0, index - 1);
-        } else if (index < this.currentHoleIndex) {
-            this.currentHoleIndex--;
+        // Switch to previous level if we deleted the current one
+        if (index === this.currentLevelIndex) {
+            this.currentLevelIndex = Math.max(0, index - 1);
+        } else if (index < this.currentLevelIndex) {
+            this.currentLevelIndex--;
         }
         
-        this.renderHoleList();
-        this.loadHole(this.currentHoleIndex);
+        this.renderLevelList();
+        this.loadLevel(this.currentLevelIndex);
         
-        console.log(`🗑️ Deleted hole, ${this.holes.length} remaining`);
+        console.log(`🗑️ Deleted level, ${this.levels.length} remaining`);
     }
     
-    switchHole(index) {
-        if (index === this.currentHoleIndex) return;
+    switchLevel(index) {
+        if (index === this.currentLevelIndex) return;
         
-        // Save current hole data
-        this.saveCurrentHoleData();
+        // Save current level data
+        this.saveCurrentLevelData();
         
-        // Switch to new hole
-        this.currentHoleIndex = index;
-        this.loadHole(index);
-        this.renderHoleList();
+        // Switch to new level
+        this.currentLevelIndex = index;
+        this.loadLevel(index);
+        this.renderLevelList();
         
-        console.log(`🔄 Switched to Hole ${this.holes[index].number}`);
+        const levelName = this.levels[index].name || `Level ${this.levels[index].number}`;
+        console.log(`🔄 Switched to ${levelName}`);
     }
     
-    saveCurrentHoleData() {
-        const hole = this.holes[this.currentHoleIndex];
+    saveCurrentLevelData() {
+        const level = this.levels[this.currentLevelIndex];
         
         // Save all object arrays from editor's mapData
-        hole.startPoint = { ...this.editor.mapData.startPoint };
-        hole.hole = { ...this.editor.mapData.hole };
-        hole.walls = JSON.parse(JSON.stringify(this.editor.mapData.walls));
-        hole.ramps = JSON.parse(JSON.stringify(this.editor.mapData.ramps));
-        hole.powerupSpawns = JSON.parse(JSON.stringify(this.editor.mapData.powerupSpawns));
-        hole.fans = JSON.parse(JSON.stringify(this.editor.mapData.fans || []));
-        hole.bouncePads = JSON.parse(JSON.stringify(this.editor.mapData.bouncePads || []));
-        hole.bumpers = JSON.parse(JSON.stringify(this.editor.mapData.bumpers || []));
-        hole.speedBoosts = JSON.parse(JSON.stringify(this.editor.mapData.speedBoosts || []));
+        level.startPoint = { ...this.editor.state.mapData.startPoint };
+        level.hole = { ...this.editor.state.mapData.hole };
+        level.walls = JSON.parse(JSON.stringify(this.editor.state.mapData.walls));
+        level.ramps = JSON.parse(JSON.stringify(this.editor.state.mapData.ramps));
+        level.powerupSpawns = JSON.parse(JSON.stringify(this.editor.state.mapData.powerupSpawns));
+        level.fans = JSON.parse(JSON.stringify(this.editor.state.mapData.fans || []));
+        level.bouncePads = JSON.parse(JSON.stringify(this.editor.state.mapData.bouncePads || []));
+        level.bumpers = JSON.parse(JSON.stringify(this.editor.state.mapData.bumpers || []));
+        level.speedBoosts = JSON.parse(JSON.stringify(this.editor.state.mapData.speedBoosts || []));
     }
     
-    loadHole(index) {
-        const hole = this.holes[index];
+    loadLevel(index) {
+        const level = this.levels[index];
         
         // Clear current scene
-        this.editor.objects.forEach(obj => this.editor.scene.remove(obj));
-        this.editor.objects = [];
-        this.editor.fanBlades = [];
+        this.editor.scene.objects.forEach(obj => this.editor.scene.scene.remove(obj));
+        this.editor.scene.objects = [];
+        this.editor.scene.fanBlades = [];
         
-        // Load hole data into editor
-        this.editor.mapData.startPoint = { ...hole.startPoint };
-        this.editor.mapData.hole = { ...hole.hole };
-        this.editor.mapData.walls = [];
-        this.editor.mapData.ramps = [];
-        this.editor.mapData.powerupSpawns = [];
-        this.editor.mapData.fans = [];
-        this.editor.mapData.bouncePads = [];
-        this.editor.mapData.bumpers = [];
-        this.editor.mapData.speedBoosts = [];
+        // Load level data into editor
+        this.editor.state.mapData.startPoint = { ...level.startPoint };
+        this.editor.state.mapData.hole = { ...level.hole };
+        this.editor.state.mapData.walls = [];
+        this.editor.state.mapData.ramps = [];
+        this.editor.state.mapData.powerupSpawns = [];
+        this.editor.state.mapData.fans = [];
+        this.editor.state.mapData.bouncePads = [];
+        this.editor.state.mapData.bumpers = [];
+        this.editor.state.mapData.speedBoosts = [];
         
         // Recreate objects
-        this.editor.createStartPoint();
-        this.editor.createHole();
+        this.editor.objects.createStartPoint();
+        this.editor.objects.createHole();
         
-        hole.walls.forEach(wall => {
-            this.editor.createWall(wall.position, wall.size, wall.rotationY || 0, wall.color);
+        level.walls.forEach(wall => {
+            const obj = this.editor.objects.createWall(wall.position, wall.size, wall.rotationY || 0, wall.color);
+            this.editor.scene.scene.add(obj);
+            this.editor.scene.objects.push(obj);
+            this.editor.state.mapData.walls.push(obj.userData.data);
         });
         
-        hole.ramps.forEach(ramp => {
-            this.editor.createRamp(ramp.position, ramp.size, ramp.rotationY, ramp.angle, ramp.color);
+        level.ramps.forEach(ramp => {
+            const obj = this.editor.objects.createRamp(ramp.position, ramp.size, ramp.rotationY, ramp.angle, ramp.color);
+            this.editor.scene.scene.add(obj);
+            this.editor.scene.objects.push(obj);
+            this.editor.state.mapData.ramps.push(obj.userData.data);
         });
         
-        hole.powerupSpawns.forEach(spawn => {
-            this.editor.createPowerupSpawn(spawn.position, spawn.color);
+        level.powerupSpawns.forEach(spawn => {
+            const obj = this.editor.objects.createPowerupSpawn(spawn.position, spawn.color);
+            this.editor.scene.scene.add(obj);
+            this.editor.scene.objects.push(obj);
+            this.editor.state.mapData.powerupSpawns.push(obj.userData.data);
         });
         
-        if (hole.fans) {
-            hole.fans.forEach(fan => {
-                this.editor.createFan(fan.position, fan.rotationY || 0, fan.angle || 0, fan.strength || 10);
+        if (level.fans) {
+            level.fans.forEach(fan => {
+                const obj = this.editor.objects.createFan(fan.position, fan.rotationY || 0, fan.angle || 0, fan.strength || 10);
+                this.editor.scene.scene.add(obj);
+                this.editor.scene.objects.push(obj);
+                this.editor.state.mapData.fans.push(obj.userData.data);
             });
         }
         
-        if (hole.bouncePads) {
-            hole.bouncePads.forEach(pad => {
-                this.editor.createBouncePad(pad.position, pad.rotationY || 0, pad.strength || 20);
+        if (level.bouncePads) {
+            level.bouncePads.forEach(pad => {
+                const obj = this.editor.objects.createBouncePad(pad.position, pad.rotationY || 0, pad.strength || 20);
+                this.editor.scene.scene.add(obj);
+                this.editor.scene.objects.push(obj);
+                this.editor.state.mapData.bouncePads.push(obj.userData.data);
             });
         }
         
-        if (hole.bumpers) {
-            hole.bumpers.forEach(bumper => {
-                this.editor.createBumper(bumper.position, bumper.rotationY || 0, bumper.strength || 15);
+        if (level.bumpers) {
+            level.bumpers.forEach(bumper => {
+                const obj = this.editor.objects.createBumper(bumper.position, bumper.rotationY || 0, bumper.strength || 15);
+                this.editor.scene.scene.add(obj);
+                this.editor.scene.objects.push(obj);
+                this.editor.state.mapData.bumpers.push(obj.userData.data);
             });
         }
         
-        if (hole.speedBoosts) {
-            hole.speedBoosts.forEach(boost => {
-                this.editor.createSpeedBoost(boost.position, boost.rotationY || 0, boost.strength || 50);
+        if (level.speedBoosts) {
+            level.speedBoosts.forEach(boost => {
+                const obj = this.editor.objects.createSpeedBoost(boost.position, boost.rotationY || 0, boost.strength || 50);
+                this.editor.scene.scene.add(obj);
+                this.editor.scene.objects.push(obj);
+                this.editor.state.mapData.speedBoosts.push(obj.userData.data);
             });
         }
         
         // Clear selection
-        this.editor.clearSelection();
-        this.editor.updatePropertiesPanel();
+        this.editor.state.clearSelection();
+        this.editor.ui.updatePropertiesPanel();
     }
     
     getMapData() {
-        // Save current hole before exporting
-        this.saveCurrentHoleData();
+        // Save current level before exporting
+        this.saveCurrentLevelData();
         
         return {
-            name: this.editor.mapData.name,
-            holes: this.holes,
-            settings: this.editor.mapData.settings
+            name: this.editor.state.mapData.name,
+            levels: this.levels,
+            settings: this.editor.state.mapData.settings
         };
     }
     
     loadMapData(mapData) {
-        // Load map with holes array
-        if (mapData.holes && Array.isArray(mapData.holes)) {
-            this.holes = mapData.holes;
-            this.currentHoleIndex = 0;
-            this.renderHoleList();
-            this.loadHole(0);
+        // Update map name input
+        const mapNameInput = document.getElementById('map-name-input');
+        if (mapNameInput) {
+            mapNameInput.value = mapData.name || 'Untitled Map';
+        }
+        
+        // Load map with levels array (new format) or holes array (old format)
+        const levelsData = mapData.levels || mapData.holes;
+        if (levelsData && Array.isArray(levelsData)) {
+            this.levels = levelsData;
+            this.currentLevelIndex = 0;
+            this.renderLevelList();
+            this.loadLevel(0);
         } else {
-            // Legacy format - single hole
-            const singleHole = {
+            // Legacy format - single level
+            const singleLevel = {
                 number: 1,
+                name: 'Level 1',
                 par: 3,
                 startPoint: mapData.startPoint,
                 hole: mapData.hole,
@@ -241,16 +326,23 @@ export class MultiHoleManager {
                 bumpers: mapData.bumpers || [],
                 speedBoosts: mapData.speedBoosts || []
             };
-            this.holes = [singleHole];
-            this.currentHoleIndex = 0;
-            this.renderHoleList();
-            this.loadHole(0);
+            this.levels = [singleLevel];
+            this.currentLevelIndex = 0;
+            this.renderLevelList();
+            this.loadLevel(0);
         }
+        
+        // Ensure all loaded levels have names
+        this.levels.forEach(level => {
+            if (!level.name) {
+                level.name = `Level ${level.number}`;
+            }
+        });
         
         // Load settings
         if (mapData.settings) {
-            this.editor.mapData.settings = mapData.settings;
-            this.editor.applyMapSettings();
+            this.editor.state.mapData.settings = mapData.settings;
+            this.editor.ui.applyMapSettings();
         }
     }
 }

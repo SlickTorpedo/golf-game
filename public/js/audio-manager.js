@@ -248,6 +248,16 @@ export class AudioManager {
         this.playSfx(UI.audio.bounceSfx);
     }
 
+    playCollisionSound() {
+        console.log('💥 Playing collision sound');
+        this.playSfx(UI.audio.collisionSfx);
+    }
+
+    playCollisionSound() {
+        console.log('💥 Playing collision sound');
+        this.playSfx(UI.audio.collisionSfx);
+    }
+
     playBumpSound() {
         console.log('🔴 Playing bump sound');
         this.playSfx(UI.audio.bumpSfx);

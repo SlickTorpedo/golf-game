@@ -329,12 +329,14 @@ app.get('/api/maps', async (req, res) => {
         const maps = await Promise.all(jsonFiles.map(async (file) => {
             const filePath = path.join(MAPS_DIR, file);
             const stats = await fs.stat(filePath);
-            const content = await fs.readFile(filePath, 'utf8');
-            const data = JSON.parse(content);
+            // Use filename (without .json) as the base name
+            const baseName = file.replace('.json', '');
+            // Convert underscores to spaces for display
+            const displayName = baseName.replace(/_/g, ' ');
             
             return {
-                name: data.name,
-                fileName: file,
+                name: displayName,
+                fileName: baseName,
                 lastModified: stats.mtime
             };
         }));
