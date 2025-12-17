@@ -262,6 +262,11 @@ export class AudioManager {
         console.log('🔴 Playing bump sound');
         this.playSfx(UI.audio.bumpSfx);
     }
+    
+    playBurnSound() {
+        console.log('🔥 Playing burn sound');
+        this.playSfx(UI.audio.burnSfx);
+    }
 
     playProximitySound(volume) {
         if (!UI.audio.proximityAudio) {

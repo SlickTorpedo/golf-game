@@ -157,6 +157,33 @@ export class PhysicsManager {
                 }
             }
             
+            // Check if collision is between ball and lava
+            let lavaBall = null;
+            let lava = null;
+            
+            if (bodyA.isLava && bodyB.shapes[0] && bodyB.shapes[0].radius === 0.5) {
+                lava = bodyA;
+                lavaBall = bodyB;
+            } else if (bodyB.isLava && bodyA.shapes[0] && bodyA.shapes[0].radius === 0.5) {
+                lava = bodyB;
+                lavaBall = bodyA;
+            }
+            
+            if (lavaBall && lava && this.lastShotPosition) {
+                console.log('🔥 Ball hit lava! Teleporting back to last shot position');
+                
+                // Teleport ball back to last shot position
+                lavaBall.position.copy(this.lastShotPosition);
+                lavaBall.velocity.set(0, 0, 0);
+                lavaBall.angularVelocity.set(0, 0, 0);
+                lavaBall.wakeUp();
+                
+                // Play burn sound
+                if (this.audioManager) {
+                    this.audioManager.playBurnSound();
+                }
+            }
+            
             // Check if collision is between ball and bumper
             let bumperBall = null;
             let bumper = null;
@@ -758,7 +785,25 @@ export class PhysicsManager {
         body.boostRotationY = rotationY;
         
         this.world.addBody(body);
-        console.log('⚡ Speed boost physics body created at:', position, 'strength:', strength, 'direction:', rotationY);
+        console.log('💨 Speed boost physics body created at:', position, 'strength:', strength);
+        return body;
+    }
+    
+    createLava(position, width = 5, depth = 5) {
+        // Create box body for lava pool
+        const shape = new CANNON.Box(new CANNON.Vec3(width / 2, 0.1, depth / 2));
+        const body = new CANNON.Body({
+            mass: 0, // Static
+            position: new CANNON.Vec3(position.x, position.y, position.z),
+            collisionResponse: false // Make it a sensor - detect collisions but don't apply physical forces
+        });
+        body.addShape(shape);
+        
+        // Store lava data
+        body.isLava = true;
+        
+        this.world.addBody(body);
+        console.log('🔥 Lava pool physics body created at:', position, 'size:', width, 'x', depth);
         return body;
     }
     

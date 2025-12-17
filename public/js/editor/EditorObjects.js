@@ -269,6 +269,48 @@ export class EditorObjects {
         return bumperGroup;
     }
     
+    createLava(position, rotationY = 0, width = 5, depth = 5) {
+        const lavaGroup = new THREE.Group();
+        
+        // Lava pool surface
+        const lavaGeometry = new THREE.PlaneGeometry(width, depth);
+        const lavaMaterial = new THREE.MeshLambertMaterial({ 
+            color: 0xff4500,
+            emissive: 0xff2200,
+            emissiveIntensity: 0.5
+        });
+        const lava = new THREE.Mesh(lavaGeometry, lavaMaterial);
+        lava.rotation.x = -Math.PI / 2;
+        lava.position.y = 0.1;
+        lavaGroup.add(lava);
+        
+        // Add some bubble spheres for visual effect
+        const bubbleGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+        const bubbleMaterial = new THREE.MeshLambertMaterial({ 
+            color: 0xff6600,
+            emissive: 0xff4400
+        });
+        
+        for (let i = 0; i < Math.floor(width * depth / 2); i++) {
+            const bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
+            bubble.position.x = (Math.random() - 0.5) * width;
+            bubble.position.z = (Math.random() - 0.5) * depth;
+            bubble.position.y = 0.2;
+            lavaGroup.add(bubble);
+        }
+        
+        lavaGroup.position.set(position.x, position.y, position.z);
+        lavaGroup.rotation.y = (rotationY * Math.PI) / 180;
+        
+        const lavaData = { position, rotationY, width, depth };
+        lavaGroup.userData = { 
+            type: 'lava',
+            data: lavaData
+        };
+        
+        return lavaGroup;
+    }
+    
     createSpeedBoost(position, rotationY = 0, strength = 50) {
         const boostGroup = new THREE.Group();
         

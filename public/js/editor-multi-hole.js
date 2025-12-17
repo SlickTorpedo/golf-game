@@ -27,7 +27,8 @@ export class MultiLevelManager {
             fans: [],
             bouncePads: [],
             bumpers: [],
-            speedBoosts: []
+            speedBoosts: [],
+            lava: []
         };
     }
     
@@ -198,6 +199,7 @@ export class MultiLevelManager {
         level.bouncePads = JSON.parse(JSON.stringify(this.editor.state.mapData.bouncePads || []));
         level.bumpers = JSON.parse(JSON.stringify(this.editor.state.mapData.bumpers || []));
         level.speedBoosts = JSON.parse(JSON.stringify(this.editor.state.mapData.speedBoosts || []));
+        level.lava = JSON.parse(JSON.stringify(this.editor.state.mapData.lava || []));
     }
     
     loadLevel(index) {
@@ -218,6 +220,7 @@ export class MultiLevelManager {
         this.editor.state.mapData.bouncePads = [];
         this.editor.state.mapData.bumpers = [];
         this.editor.state.mapData.speedBoosts = [];
+        this.editor.state.mapData.lava = [];
         
         // Recreate objects
         this.editor.objects.createStartPoint();
@@ -277,6 +280,15 @@ export class MultiLevelManager {
                 this.editor.scene.scene.add(obj);
                 this.editor.scene.objects.push(obj);
                 this.editor.state.mapData.speedBoosts.push(obj.userData.data);
+            });
+        }
+        
+        if (level.lava) {
+            level.lava.forEach(lavaPool => {
+                const obj = this.editor.objects.createLava(lavaPool.position, lavaPool.rotationY || 0, lavaPool.width || 5, lavaPool.depth || 5);
+                this.editor.scene.scene.add(obj);
+                this.editor.scene.objects.push(obj);
+                this.editor.state.mapData.lava.push(obj.userData.data);
             });
         }
         

@@ -117,6 +117,23 @@ export class EditorUI {
             </div>`;
         }
         
+        if (type === 'lava') {
+            html += `<div class="property-group">
+                <label>Rotation Y (degrees)</label>
+                <input type="number" id="prop-rotation" value="${data.rotationY || 0}" step="15" min="0" max="360">
+            </div>`;
+            
+            html += `<div class="property-group">
+                <label>Width</label>
+                <input type="number" id="prop-width" value="${data.width || 5}" step="0.5" min="1" max="20">
+            </div>`;
+            
+            html += `<div class="property-group">
+                <label>Depth</label>
+                <input type="number" id="prop-depth" value="${data.depth || 5}" step="0.5" min="1" max="20">
+            </div>`;
+        }
+        
         if (type === 'hole') {
             html += `<div class="property-group">
                 <label>Radius</label>
@@ -203,6 +220,16 @@ export class EditorUI {
             } else if (type === 'speedBoost') {
                 this.updateSpeedBoostStrength(parseFloat(strength.value));
             }
+        });
+        
+        const width = document.getElementById('prop-width');
+        if (width) width.addEventListener('change', () => {
+            this.updateLavaWidth(parseFloat(width.value));
+        });
+        
+        const depth = document.getElementById('prop-depth');
+        if (depth) depth.addEventListener('change', () => {
+            this.updateLavaDepth(parseFloat(depth.value));
         });
         
         const radius = document.getElementById('prop-radius');
@@ -340,6 +367,47 @@ export class EditorUI {
             this.editor.state.selectedObject.rotation.y = (value * Math.PI) / 180;
             this.editor.history.saveHistory('modify');
         }
+    }
+    
+    updateLavaWidth(value) {
+        if (this.editor.state.selectedObject && this.editor.state.selectedObject.userData.type === 'lava') {
+            this.editor.state.selectedObject.userData.data.width = value;
+            this.rebuildLava();
+            this.editor.history.saveHistory('modify');
+        }
+    }
+    
+    updateLavaDepth(value) {
+        if (this.editor.state.selectedObject && this.editor.state.selectedObject.userData.type === 'lava') {
+            this.editor.state.selectedObject.userData.data.depth = value;
+            this.rebuildLava();
+            this.editor.history.saveHistory('modify');
+        }
+    }
+    
+    updateLavaRotation(value) {
+        if (this.editor.state.selectedObject && this.editor.state.selectedObject.userData.type === 'lava') {
+            this.editor.state.selectedObject.userData.data.rotationY = value;
+            this.editor.state.selectedObject.rotation.y = (value * Math.PI) / 180;
+            this.editor.history.saveHistory('modify');
+        }
+    }
+    
+    rebuildLava() {
+        const obj = this.editor.state.selectedObject;
+        if (!obj || obj.userData.type !== 'lava') return;
+        
+        const data = obj.userData.data;
+        const newObj = this.editor.objects.createLava(data.position, data.rotationY, data.width, data.depth);
+        this.editor.scene.scene.remove(obj);
+        this.editor.scene.scene.add(newObj);
+        
+        const index = this.editor.scene.objects.indexOf(obj);
+        if (index > -1) {
+            this.editor.scene.objects[index] = newObj;
+        }
+        
+        this.editor.state.selectObject(newObj);
     }
     
     updateHoleRadius(value) {

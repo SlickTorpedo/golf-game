@@ -118,6 +118,13 @@ export class SceneManager {
             });
         }
         
+        // Create lava from hole
+        if (hole.lava) {
+            hole.lava.forEach(lavaPool => {
+                this.createLava(lavaPool.position, lavaPool.rotationY || 0, lavaPool.width || 5, lavaPool.depth || 5);
+            });
+        }
+        
         // Create hole
         this.createHole(hole.hole);
         
@@ -976,6 +983,65 @@ export class SceneManager {
         return bumperGroup;
     }
     
+    createLava(position, rotationY = 0, width = 5, depth = 5) {
+        const lavaGroup = new THREE.Group();
+        
+        // Lava pool surface - glowing red/orange
+        const lavaGeometry = new THREE.PlaneGeometry(width, depth);
+        const lavaMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xff4500,
+            emissive: 0xff2200,
+            emissiveIntensity: 0.7,
+            roughness: 0.7,
+            metalness: 0.2
+        });
+        const lava = new THREE.Mesh(lavaGeometry, lavaMaterial);
+        lava.rotation.x = -Math.PI / 2;
+        lava.position.y = 0.1;
+        lavaGroup.add(lava);
+        
+        // Add animated bubbles/particles effect
+        const bubbleCount = Math.floor(width * depth / 2);
+        const bubbleGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+        const bubbleMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xff6600,
+            emissive: 0xff4400,
+            emissiveIntensity: 0.9
+        });
+        
+        const bubbles = [];
+        for (let i = 0; i < bubbleCount; i++) {
+            const bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
+            bubble.position.x = (Math.random() - 0.5) * width;
+            bubble.position.z = (Math.random() - 0.5) * depth;
+            bubble.position.y = 0.2 + Math.random() * 0.3;
+            lavaGroup.add(bubble);
+            bubbles.push({
+                mesh: bubble,
+                baseY: bubble.position.y,
+                speed: 0.5 + Math.random()
+            });
+        }
+        
+        lavaGroup.position.set(position.x, position.y, position.z);
+        lavaGroup.rotation.y = (rotationY * Math.PI) / 180;
+        lavaGroup.userData.type = 'lava'; // Tag for removal
+        lavaGroup.userData.bubbles = bubbles; // Store for animation
+        
+        this.scene.add(lavaGroup);
+        
+        // Store for animation
+        if (!this.lavaObjects) this.lavaObjects = [];
+        this.lavaObjects.push(lavaGroup);
+        
+        // Add physics body for collision
+        this.physicsManager.createLava(position, width, depth);
+        
+        console.log('🔥 Lava pool created at:', position, 'size:', width, 'x', depth);
+        
+        return lavaGroup;
+    }
+    
     createSpeedBoost(position, rotationY = 0, strength = 50) {
         const boostGroup = new THREE.Group();
         
@@ -1549,6 +1615,7 @@ export class SceneManager {
                 child.userData.type === 'bouncePad' ||
                 child.userData.type === 'bumper' ||
                 child.userData.type === 'speedBoost' ||
+                child.userData.type === 'lava' ||
                 child.userData.type === 'hole-visual' // Remove hole visuals too!
             )) {
                 objectsToRemove.push(child);
@@ -1572,6 +1639,7 @@ export class SceneManager {
         this.bumpers = [];
         this.speedBoosts = [];
         this.fans = [];
+        this.lavaObjects = [];
         
         console.log(`🧹 Cleared ${objectsToRemove.length} map objects from scene`);
     }
@@ -1863,6 +1931,19 @@ export class SceneManager {
         // Update physics
         if (this.physicsManager) {
             this.physicsManager.update(deltaTime);
+        }
+        
+        // Animate lava bubbles
+        if (this.lavaObjects) {
+            const time = Date.now() * 0.001;
+            this.lavaObjects.forEach(lavaGroup => {
+                if (lavaGroup.userData.bubbles) {
+                    lavaGroup.userData.bubbles.forEach(bubble => {
+                        // Bob bubbles up and down
+                        bubble.mesh.position.y = bubble.baseY + Math.sin(time * bubble.speed) * 0.15;
+                    });
+                }
+            });
         }
         
         // Animate fans

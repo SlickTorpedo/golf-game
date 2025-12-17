@@ -138,6 +138,18 @@ export class EditorTools {
                 if (!this.editor.state.mapData.speedBoosts) this.editor.state.mapData.speedBoosts = [];
                 this.editor.state.mapData.speedBoosts.push(obj.userData.data);
                 break;
+            case 'lava':
+                obj = this.editor.objects.createLava(
+                    position,
+                    this.previewRotation,
+                    5,
+                    5
+                );
+                this.editor.scene.scene.add(obj);
+                this.editor.scene.objects.push(obj);
+                if (!this.editor.state.mapData.lava) this.editor.state.mapData.lava = [];
+                this.editor.state.mapData.lava.push(obj.userData.data);
+                break;
             case 'start':
                 const startObj = this.editor.scene.objects.find(o => o.userData.type === 'start');
                 if (startObj) {
@@ -225,6 +237,17 @@ export class EditorTools {
                 boostBase.position.y = 0.1;
                 boostGroup.add(boostBase);
                 mesh = boostGroup;
+                break;
+            case 'lava':
+                const lavaGroup = new THREE.Group();
+                const lavaGeom = new THREE.PlaneGeometry(5, 5);
+                const lavaMat = transparentMaterial.clone();
+                lavaMat.color = new THREE.Color(0xff4500);
+                const lavaPlane = new THREE.Mesh(lavaGeom, lavaMat);
+                lavaPlane.rotation.x = -Math.PI / 2;
+                lavaPlane.position.y = 0.1;
+                lavaGroup.add(lavaPlane);
+                mesh = lavaGroup;
                 break;
             case 'start':
                 geometry = new THREE.SphereGeometry(0.5, 16, 16);
