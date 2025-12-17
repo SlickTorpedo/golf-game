@@ -1,5 +1,5 @@
 {
-  "name": "_playtest_",
+  "name": "Cosmic Journey",
   "levels": [
     {
       "number": 1,
@@ -1874,11 +1874,9 @@
             "y": 0,
             "z": 35
           },
-          "size": {
-            "x": 20,
-            "y": 0.2,
-            "z": 20
-          }
+          "rotationY": 0,
+          "width": 5,
+          "depth": 5
         },
         {
           "position": {
@@ -1886,11 +1884,9 @@
             "y": 0,
             "z": -35
           },
-          "size": {
-            "x": 20,
-            "y": 0.2,
-            "z": 20
-          }
+          "rotationY": 0,
+          "width": 5,
+          "depth": 5
         }
       ],
       "spinners": [
@@ -1900,14 +1896,9 @@
             "y": 0.5,
             "z": 10
           },
-          "size": {
-            "x": 15,
-            "y": 2,
-            "z": 2
-          },
           "rotationY": 0,
-          "speed": 38,
-          "color": 16776960
+          "length": 8,
+          "speed": 38
         },
         {
           "position": {
@@ -1915,14 +1906,9 @@
             "y": 0.5,
             "z": -10
           },
-          "size": {
-            "x": 15,
-            "y": 2,
-            "z": 2
-          },
           "rotationY": 0,
-          "speed": -37,
-          "color": 16776960
+          "length": 8,
+          "speed": -37
         }
       ]
     },
@@ -1936,9 +1922,9 @@
         "z": 55
       },
       "hole": {
-        "x": 0,
+        "x": 35,
         "y": 0,
-        "z": -55,
+        "z": -43,
         "radius": 1.2
       },
       "walls": [
@@ -2397,15 +2383,6 @@
           },
           "rotationY": 0,
           "strength": 10
-        },
-        {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": -55
-          },
-          "rotationY": 0,
-          "strength": 12
         }
       ],
       "speedBoosts": [
@@ -2435,11 +2412,9 @@
             "y": 0,
             "z": -25
           },
-          "size": {
-            "x": 15,
-            "y": 0.2,
-            "z": 20
-          }
+          "rotationY": 0,
+          "width": 5,
+          "depth": 5
         },
         {
           "position": {
@@ -2447,11 +2422,9 @@
             "y": 0,
             "z": -35
           },
-          "size": {
-            "x": 15,
-            "y": 0.2,
-            "z": 15
-          }
+          "rotationY": 0,
+          "width": 5,
+          "depth": 5
         },
         {
           "position": {
@@ -2459,11 +2432,9 @@
             "y": 0,
             "z": 20
           },
-          "size": {
-            "x": 12,
-            "y": 0.2,
-            "z": 10
-          }
+          "rotationY": 0,
+          "width": 5,
+          "depth": 5
         }
       ],
       "spinners": [
@@ -2473,14 +2444,9 @@
             "y": 0.5,
             "z": 45
           },
-          "size": {
-            "x": 25,
-            "y": 2,
-            "z": 2
-          },
           "rotationY": 0,
-          "speed": 63,
-          "color": 16776960
+          "length": 8,
+          "speed": 63
         },
         {
           "position": {
@@ -2488,14 +2454,9 @@
             "y": 0.5,
             "z": -30
           },
-          "size": {
-            "x": 18,
-            "y": 2,
-            "z": 2
-          },
           "rotationY": 0,
-          "speed": -50,
-          "color": 16776960
+          "length": 8,
+          "speed": -50
         },
         {
           "position": {
@@ -2503,14 +2464,9 @@
             "y": 0.5,
             "z": -15
           },
-          "size": {
-            "x": 18,
-            "y": 2,
-            "z": 2
-          },
           "rotationY": 0,
-          "speed": 50,
-          "color": 16776960
+          "length": 8,
+          "speed": 50
         }
       ]
     }
