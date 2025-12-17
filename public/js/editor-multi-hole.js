@@ -366,6 +366,10 @@ export class MultiLevelManager {
         // Load settings
         if (mapData.settings) {
             this.editor.state.mapData.settings = mapData.settings;
+            // Ensure levelSize has a default value for old maps
+            if (!this.editor.state.mapData.settings.levelSize) {
+                this.editor.state.mapData.settings.levelSize = 100;
+            }
             this.editor.ui.applyMapSettings();
         }
     }
