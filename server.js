@@ -130,10 +130,27 @@ io.on('connection', (socket) => {
         // Load map if requested (for when host changes map before starting)
         if (data && data.mapName && data.mapName !== room.mapData?.name) {
             try {
-                const mapPath = path.join(MAPS_DIR, `${data.mapName}.json`);
-                const content = await fs.readFile(mapPath, 'utf8');
-                room.mapData = JSON.parse(content);
-                console.log(`Loaded map: ${data.mapName}`);
+                // Find map file by scanning all JSON files for matching name
+                const files = await fs.readdir(MAPS_DIR);
+                const jsonFiles = files.filter(f => f.endsWith('.json'));
+                
+                let mapFound = false;
+                for (const file of jsonFiles) {
+                    const filePath = path.join(MAPS_DIR, file);
+                    const content = await fs.readFile(filePath, 'utf8');
+                    const mapData = JSON.parse(content);
+                    
+                    if (mapData.name === data.mapName) {
+                        room.mapData = mapData;
+                        console.log(`Loaded map: ${data.mapName} from file: ${file}`);
+                        mapFound = true;
+                        break;
+                    }
+                }
+                
+                if (!mapFound) {
+                    console.error(`Map not found: ${data.mapName}`);
+                }
             } catch (error) {
                 console.error(`Error loading map ${data.mapName}:`, error);
                 // Use existing map or default

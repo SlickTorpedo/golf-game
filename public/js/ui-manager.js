@@ -147,7 +147,7 @@ export function updateScoreboard(players) {
         scoreItem.className = 'score-item' + (index === 0 ? ' current' : '');
         scoreItem.innerHTML = `
             <span class="player-name">${player.name}</span>
-            <span class="score">${player.score || 0}</span>
+            <span class="score">${player.strokes || 0}</span>
         `;
         UI.elements.scoreboardList.appendChild(scoreItem);
     });

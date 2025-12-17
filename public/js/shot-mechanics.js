@@ -326,6 +326,11 @@ export class ShotMechanics {
         // Save current position for mulligan
         this.lastShotPosition = this.localBall.position.clone();
         
+        // Also save to physics manager for out-of-bounds teleport
+        if (this.physicsManager) {
+            this.physicsManager.setLastShotPosition(this.localBall.position);
+        }
+        
         // Play whoosh sound for stronger shots
         if (power > 0.5 && this.audioManager) {
             this.audioManager.playBallWhooshSound();

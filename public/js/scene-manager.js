@@ -40,6 +40,11 @@ export class SceneManager {
         this.localPlayerId = null;
         this.ballGlowLight = null; // Visual indicator for powerup effects
         
+        // Multi-hole support
+        this.currentHoleIndex = 0;
+        this.holes = [];
+        this.playerScores = new Map(); // Track strokes per player per hole
+        
         // Multiplayer sync
         this.lastSyncTime = 0;
         this.syncInterval = 50; // Sync every 50ms (20 times per second)
@@ -58,6 +63,41 @@ export class SceneManager {
         this.speedBoosts = [];
     }
     
+    normalizeMapData(mapData) {
+        // Convert old single-hole format to new multi-hole format
+        if (!mapData) return null;
+        
+        // If already in new format (has holes array), return as-is
+        if (mapData.holes && Array.isArray(mapData.holes)) {
+            return mapData;
+        }
+        
+        // Convert old format to new format
+        const normalized = {
+            name: mapData.name || 'Untitled Map',
+            holes: [{
+                number: 1,
+                par: 3,
+                startPoint: mapData.startPoint || { x: 0, y: 2, z: 30 },
+                hole: mapData.hole || { x: 0, y: 0, z: -30, radius: 1.2 },
+                walls: mapData.walls || [],
+                ramps: mapData.ramps || [],
+                fans: mapData.fans || [],
+                bouncePads: mapData.bouncePads || [],
+                bumpers: mapData.bumpers || [],
+                speedBoosts: mapData.speedBoosts || [],
+                powerupSpawns: mapData.powerupSpawns || []
+            }],
+            settings: mapData.settings || {
+                skyColor: 0x87CEEB,
+                groundColor: 0x228B22,
+                gravity: -30
+            }
+        };
+        
+        return normalized;
+    }
+    
     initGame(players, localPlayerId, socket, audioManager, mapData = null) {
         if (this.gameInitialized) return;
         this.gameInitialized = true;
@@ -65,11 +105,25 @@ export class SceneManager {
         this.audioManager = audioManager;
         this.totalPlayers = players.length;
         this.localPlayerId = localPlayerId;
-        this.mapData = mapData;
+        
+        // Normalize map data to multi-hole format
+        this.mapData = this.normalizeMapData(mapData);
+        this.holes = this.mapData ? this.mapData.holes : [];
+        this.currentHoleIndex = 0;
+        
+        // Initialize player scores
+        players.forEach(player => {
+            this.playerScores.set(player.id, {
+                name: player.name,
+                holeStrokes: [], // Strokes per hole
+                totalStrokes: 0
+            });
+        });
         
         console.log('🎮 Initializing game with', players.length, 'players');
-        console.log('🗺️ mapData parameter received:', mapData);
-        console.log('🗺️ this.mapData set to:', this.mapData);
+        console.log('🗺️ mapData received:', mapData);
+        console.log('🗺️ Normalized map data:', this.mapData);
+        console.log(`⛳ Loading ${this.holes.length} hole(s)`);
         const container = document.getElementById('game-canvas');
         
         if (!container) {

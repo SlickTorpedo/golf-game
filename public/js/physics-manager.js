@@ -38,7 +38,7 @@ export class PhysicsManager {
             this.ballMaterial,
             this.groundMaterial,
             {
-                friction: 0.6, // Higher friction slows ball down more
+                friction: 0.9, // Higher friction slows ball down more
                 restitution: 0.5, // Realistic bouncing - ball bounces a few times
                 contactEquationStiffness: 1e8,
                 contactEquationRelaxation: 3
@@ -68,6 +68,9 @@ export class PhysicsManager {
         
         // Track last safe position (over ground) for each ball
         this.lastSafePositions = new Map();
+        
+        // Track last shot position for teleport
+        this.lastShotPosition = null;
         
         // Setup collision listeners
         this.setupCollisionListeners();
@@ -393,8 +396,8 @@ export class PhysicsManager {
         const body = new CANNON.Body({
             mass: mass,
             material: this.ballMaterial,
-            linearDamping: 0.75, // Air resistance - stops a bit faster
-            angularDamping: 0.1 // Low rotational damping for natural rolling
+            linearDamping: 0.9, // Air resistance - stops a bit faster
+            angularDamping: 0.3 // Rotational damping to slow rolling
         });
         body.addShape(shape);
         body.position.set(mesh.position.x, mesh.position.y, mesh.position.z);
@@ -708,36 +711,45 @@ export class PhysicsManager {
                         const fanPos = fan.group.position;
                         const ballPos = body.position;
                         
-                        // Calculate distance from fan
+                        // Get fan direction (forward direction of the fan)
+                        const fanRotation = fan.group.rotation;
+                        
+                        // Convert THREE.js Euler to direction vector
+                        const direction = new CANNON.Vec3(
+                            Math.sin(fanRotation.y) * Math.cos(fanRotation.x),
+                            -Math.sin(fanRotation.x),
+                            Math.cos(fanRotation.y) * Math.cos(fanRotation.x)
+                        );
+                        
+                        // Calculate vector from fan to ball
                         const dx = ballPos.x - fanPos.x;
                         const dy = ballPos.y - fanPos.y;
                         const dz = ballPos.z - fanPos.z;
-                        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
                         
-                        // Fan range: affects balls within 15 units
-                        const maxRange = 15;
-                        if (distance < maxRange) {
-                            // Get fan direction (forward direction of the fan)
-                            const fanForward = new CANNON.Vec3(0, 0, 1);
-                            const fanRotation = fan.group.rotation;
+                        // Project ball position onto fan direction (distance along the line)
+                        const distanceAlong = dx * direction.x + dy * direction.y + dz * direction.z;
+                        
+                        // Only affect balls in front of fan (positive direction) within range
+                        const maxRange = 12;
+                        if (distanceAlong > 0 && distanceAlong < maxRange) {
+                            // Calculate perpendicular distance from fan's centerline
+                            const projectionX = fanPos.x + direction.x * distanceAlong;
+                            const projectionY = fanPos.y + direction.y * distanceAlong;
+                            const projectionZ = fanPos.z + direction.z * distanceAlong;
                             
-                            // Convert THREE.js Euler to direction vector
-                            const direction = new CANNON.Vec3(
-                                Math.sin(fanRotation.y) * Math.cos(fanRotation.x),
-                                -Math.sin(fanRotation.x),
-                                Math.cos(fanRotation.y) * Math.cos(fanRotation.x)
+                            const perpDist = Math.sqrt(
+                                Math.pow(ballPos.x - projectionX, 2) +
+                                Math.pow(ballPos.y - projectionY, 2) +
+                                Math.pow(ballPos.z - projectionZ, 2)
                             );
                             
-                            // Check if ball is in front of the fan (within a cone)
-                            const toBall = new CANNON.Vec3(dx, dy, dz);
-                            toBall.normalize();
-                            const dot = toBall.dot(direction);
-                            
-                            // Only apply force if ball is in front of fan (cone angle ~60 degrees)
-                            if (dot > 0.5) {
-                                // Force decreases with distance
-                                const falloff = 1 - (distance / maxRange);
-                                const forceMagnitude = fan.strength * falloff * dot;
+                            // Only push if ball is within narrow corridor (3 units from centerline)
+                            const corridorWidth = 3;
+                            if (perpDist < corridorWidth) {
+                                // Force decreases with distance along and perpendicular distance
+                                const alongFalloff = 1 - (distanceAlong / maxRange);
+                                const perpFalloff = 1 - (perpDist / corridorWidth);
+                                const forceMagnitude = fan.strength * alongFalloff * perpFalloff;
                                 
                                 // Apply force in fan direction
                                 const force = direction.scale(forceMagnitude);
@@ -882,13 +894,36 @@ export class PhysicsManager {
                     this.lastSafePositions.get(mesh).copy(body.position);
                 }
                 
-                // If ball is NOT over ground and has a safe position, teleport back
-                if (!isOverGround && this.lastSafePositions.has(mesh) && body.holeSettling !== 2) {
-                    const safePos = this.lastSafePositions.get(mesh);
-                    console.log('🚀 Ball went off map! Teleporting back to:', safePos);
-                    body.position.copy(safePos);
-                    body.velocity.set(0, 0, 0);
-                    body.angularVelocity.set(0, 0, 0);
+                // If ball is NOT over ground, teleport to last shot position
+                if (!isOverGround && body.holeSettling !== 2) {
+                    let teleportPos = null;
+                    
+                    if (this.lastShotPosition) {
+                        // Try to find ground below the shot position
+                        teleportPos = this.findGroundBelow(this.lastShotPosition);
+                        
+                        // If no ground directly below, find nearest ground
+                        if (!teleportPos) {
+                            console.log('⚠️ No ground below shot position, searching for nearest ground...');
+                            teleportPos = this.findNearestGround(this.lastShotPosition);
+                        }
+                        
+                        if (teleportPos) {
+                            console.log('🚀 Ball went off map! Teleporting to shot position:', teleportPos);
+                        }
+                    }
+                    
+                    // Fallback to last safe position if we couldn't find ground near shot position
+                    if (!teleportPos && this.lastSafePositions.has(mesh)) {
+                        teleportPos = this.lastSafePositions.get(mesh);
+                        console.log('🚀 Ball went off map! Using fallback safe position:', teleportPos);
+                    }
+                    
+                    if (teleportPos) {
+                        body.position.copy(teleportPos);
+                        body.velocity.set(0, 0, 0);
+                        body.angularVelocity.set(0, 0, 0);
+                    }
                 }
                 
                 // Safety check: if ball falls below floor (except in hole), teleport it back up
@@ -911,6 +946,54 @@ export class PhysicsManager {
             mesh.position.copy(body.position);
             mesh.quaternion.copy(body.quaternion);
         });
+    }
+    
+    setLastShotPosition(position) {
+        // Store the position where the shot was taken from
+        this.lastShotPosition = new CANNON.Vec3(position.x, position.y, position.z);
+        console.log('📍 Last shot position saved:', this.lastShotPosition);
+    }
+    
+    findGroundBelow(position) {
+        // Cast a ray downward from position to find ground
+        const rayStart = new CANNON.Vec3(position.x, position.y + 10, position.z);
+        const rayEnd = new CANNON.Vec3(position.x, -10, position.z);
+        const result = new CANNON.RaycastResult();
+        
+        this.world.raycastClosest(rayStart, rayEnd, {}, result);
+        
+        if (result.hasHit) {
+            // Return position slightly above the ground
+            return new CANNON.Vec3(
+                result.hitPointWorld.x,
+                result.hitPointWorld.y + 2,
+                result.hitPointWorld.z
+            );
+        }
+        
+        return null;
+    }
+    
+    findNearestGround(position) {
+        // Search in a spiral pattern for the nearest ground
+        const searchRadius = 20;
+        const steps = 8;
+        
+        for (let radius = 2; radius <= searchRadius; radius += 2) {
+            for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / steps) {
+                const testX = position.x + Math.cos(angle) * radius;
+                const testZ = position.z + Math.sin(angle) * radius;
+                const testPos = new CANNON.Vec3(testX, position.y, testZ);
+                
+                const ground = this.findGroundBelow(testPos);
+                if (ground) {
+                    console.log('🎯 Found nearest ground at:', ground);
+                    return ground;
+                }
+            }
+        }
+        
+        return null;
     }
     
     getBallVelocity(mesh) {

@@ -1,0 +1,161 @@
+{
+  "name": "Tutorial Course",
+  "holes": [
+    {
+      "number": 1,
+      "par": 3,
+      "startPoint": { "x": 0, "y": 2, "z": 30 },
+      "hole": { "x": 0, "y": 0, "z": -30, "radius": 1.2 },
+      "walls": [
+        {
+          "position": { "x": 15, "y": 1, "z": 0 },
+          "size": { "x": 4, "y": 2, "z": 20 },
+          "rotationY": 0,
+          "color": 6710886
+        },
+        {
+          "position": { "x": -15, "y": 1, "z": 0 },
+          "size": { "x": 4, "y": 2, "z": 20 },
+          "rotationY": 0,
+          "color": 6710886
+        }
+      ],
+      "ramps": [],
+      "fans": [],
+      "bouncePads": [],
+      "bumpers": [],
+      "speedBoosts": [],
+      "powerupSpawns": [
+        { "position": { "x": 0, "y": 1, "z": 0 } }
+      ]
+    },
+    {
+      "number": 2,
+      "par": 4,
+      "startPoint": { "x": -35, "y": 2, "z": 35 },
+      "hole": { "x": 35, "y": 0, "z": -35, "radius": 1.2 },
+      "walls": [
+        {
+          "position": { "x": 0, "y": 1, "z": 10 },
+          "size": { "x": 30, "y": 2, "z": 4 },
+          "rotationY": 0,
+          "color": 6710886
+        },
+        {
+          "position": { "x": 0, "y": 1, "z": -10 },
+          "size": { "x": 30, "y": 2, "z": 4 },
+          "rotationY": 0,
+          "color": 6710886
+        }
+      ],
+      "ramps": [
+        {
+          "position": { "x": 0, "y": 0.3, "z": 0 },
+          "size": { "x": 10, "y": 0.5, "z": 8 },
+          "rotationY": 45,
+          "angle": 15,
+          "color": 5592405
+        }
+      ],
+      "fans": [],
+      "bouncePads": [
+        {
+          "position": { "x": 20, "y": 0.15, "z": -20 },
+          "rotationY": 0,
+          "strength": 25
+        }
+      ],
+      "bumpers": [],
+      "speedBoosts": [],
+      "powerupSpawns": [
+        { "position": { "x": -10, "y": 1, "z": 15 } },
+        { "position": { "x": 10, "y": 1, "z": -15 } }
+      ]
+    },
+    {
+      "number": 3,
+      "par": 5,
+      "startPoint": { "x": -40, "y": 2, "z": 40 },
+      "hole": { "x": 38, "y": 0, "z": -38, "radius": 1.2 },
+      "walls": [
+        {
+          "position": { "x": -40, "y": 1, "z": 30 },
+          "size": { "x": 10, "y": 2, "z": 2 },
+          "rotationY": 0,
+          "color": 6710886
+        },
+        {
+          "position": { "x": -30, "y": 1, "z": 35 },
+          "size": { "x": 2, "y": 2, "z": 12 },
+          "rotationY": 0,
+          "color": 6710886
+        },
+        {
+          "position": { "x": -24, "y": 1, "z": 40 },
+          "size": { "x": 10, "y": 2, "z": 2 },
+          "rotationY": 0,
+          "color": 6710886
+        },
+        {
+          "position": { "x": -19, "y": 1, "z": 25 },
+          "size": { "x": 2, "y": 2, "z": 32 },
+          "rotationY": 0,
+          "color": 6710886
+        },
+        {
+          "position": { "x": 20, "y": 1, "z": 10 },
+          "size": { "x": 6, "y": 2, "z": 6 },
+          "rotationY": 45,
+          "color": 9868950
+        }
+      ],
+      "ramps": [
+        {
+          "position": { "x": -35, "y": 0.3, "z": 20 },
+          "size": { "x": 8, "y": 0.5, "z": 6 },
+          "rotationY": 90,
+          "angle": 12,
+          "color": 5592405
+        }
+      ],
+      "fans": [
+        {
+          "position": { "x": -25, "y": 1, "z": 17 },
+          "rotationY": 180,
+          "angle": 0,
+          "strength": 12
+        }
+      ],
+      "bouncePads": [
+        {
+          "position": { "x": -12, "y": 0.15, "z": 18 },
+          "rotationY": 0,
+          "strength": 28
+        }
+      ],
+      "bumpers": [
+        {
+          "position": { "x": 0, "y": 0.25, "z": 0 },
+          "rotationY": 0,
+          "strength": 16
+        }
+      ],
+      "speedBoosts": [
+        {
+          "position": { "x": -35, "y": 0.1, "z": 32 },
+          "rotationY": 180,
+          "strength": 40
+        }
+      ],
+      "powerupSpawns": [
+        { "position": { "x": -30, "y": 1, "z": 18 } },
+        { "position": { "x": 5, "y": 1, "z": 5 } }
+      ]
+    }
+  ],
+  "settings": {
+    "skyColor": 8900331,
+    "groundColor": 2263842,
+    "gravity": -30
+  }
+}
