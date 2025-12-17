@@ -168,6 +168,8 @@ export class EditorTools {
                     startObj.position.set(position.x, 1, position.z);
                     this.editor.state.mapData.startPoint.x = position.x;
                     this.editor.state.mapData.startPoint.z = position.z;
+                    this.editor.state.selectObject(startObj);
+                    this.editor.history.saveHistory('move_start');
                 }
                 break;
             case 'hole':
@@ -176,6 +178,8 @@ export class EditorTools {
                     holeObj.position.set(position.x, 0.25, position.z);
                     this.editor.state.mapData.hole.x = position.x;
                     this.editor.state.mapData.hole.z = position.z;
+                    this.editor.state.selectObject(holeObj);
+                    this.editor.history.saveHistory('move_hole');
                 }
                 break;
         }

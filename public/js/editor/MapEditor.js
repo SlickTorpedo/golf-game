@@ -39,7 +39,7 @@ export class MapEditor {
         this.setupMapSettingsListeners();
         this.setupModalListeners();
         
-        // Save initial state
+        // Save initial state as first history entry
         this.history.saveHistory('init');
         
         // Handle window resize

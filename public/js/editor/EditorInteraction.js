@@ -651,8 +651,6 @@ export class EditorInteraction {
             this.editor.tools.extrudeDirection = null;
             this.editor.tools.extrudeInitialSize = null;
             this.editor.tools.extrudeInitialPosition = null;
-            this.editor.tools.extrudeInitialData = null;
-            
             this.editor.history.saveHistory('extrude');
         }
         
@@ -662,8 +660,6 @@ export class EditorInteraction {
             this.editor.tools.moveStartPoint = null;
             this.editor.tools.moveInitialPosition = null;
             this.editor.tools.moveInitialPositions = null;
-            this.editor.tools.moveOffset = null;
-            
             this.editor.history.saveHistory('move');
         }
     }

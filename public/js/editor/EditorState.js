@@ -184,7 +184,6 @@ export class EditorState {
         
         this.selectedObject = null;
         this.editor.ui.updatePropertiesPanel();
-        this.editor.history.saveHistory('delete');
     }
     
     deleteSelectedObjects() {
@@ -243,6 +242,6 @@ export class EditorState {
         
         this.clearSelection();
         this.editor.ui.updatePropertiesPanel();
-        this.editor.history.saveHistory('delete');
+        this.editor.history.saveHistory('delete_multiple');
     }
 }

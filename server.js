@@ -327,21 +327,26 @@ app.get('/api/maps', async (req, res) => {
         const jsonFiles = files.filter(f => f.endsWith('.json'));
         
         const maps = await Promise.all(jsonFiles.map(async (file) => {
-            const filePath = path.join(MAPS_DIR, file);
-            const stats = await fs.stat(filePath);
-            // Use filename (without .json) as the base name
-            const baseName = file.replace('.json', '');
-            // Convert underscores to spaces for display
-            const displayName = baseName.replace(/_/g, ' ');
-            
-            return {
-                name: displayName,
-                fileName: baseName,
-                lastModified: stats.mtime
-            };
+            try {
+                const filePath = path.join(MAPS_DIR, file);
+                const stats = await fs.stat(filePath);
+                const content = await fs.readFile(filePath, 'utf8');
+                const mapData = JSON.parse(content);
+                
+                // Use the actual map name from the JSON file
+                return {
+                    name: mapData.name || file.replace('.json', ''),
+                    fileName: file,
+                    lastModified: stats.mtime
+                };
+            } catch (error) {
+                console.error(`Error reading map file ${file}:`, error);
+                return null;
+            }
         }));
         
-        res.json(maps);
+        // Filter out any null entries from failed reads
+        res.json(maps.filter(m => m !== null));
     } catch (error) {
         console.error('Error listing maps:', error);
         res.status(500).json({ success: false, error: error.message });
